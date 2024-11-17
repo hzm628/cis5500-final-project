@@ -1,9 +1,9 @@
 {
-  "rds_host": "",
+  "rds_host": " http://database-2.c8tv4kln6r2j.us-east-1.rds.amazonaws.com",
   "rds_port": "5432",
-  "rds_user": "",
-  "rds_password": "",
-  "rds_db": "swiftify",
+  "rds_user": "haaz",
+  "rds_password": "location123",
+  "rds_db": "location_data",
   "server_host": "localhost",
   "server_port": "8080"
 }
