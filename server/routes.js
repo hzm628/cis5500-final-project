@@ -257,7 +257,7 @@ const compare_cities = async function(req, res) {
         console.log(err);
         res.json({});
       } else {
-        res.json(data.rows[0]);
+        res.json(data.rows);
       }
     });
   }
@@ -318,7 +318,7 @@ const city = async function (req, res) {
       console.log(err);
       res.json({});
     } else {
-      res.json(data.rows[0]);
+      res.json(data.rows);
     }
   });
 }
@@ -397,7 +397,7 @@ const city_us = async function (req, res) {
       console.log(err);
       res.json({});
     } else {
-      res.json(data.rows[0]);
+      res.json(data.rows);
     }
   });
 }
