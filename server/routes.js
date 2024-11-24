@@ -97,7 +97,7 @@ const song = async function(req, res) {
 // Route 4: GET /search_countries
 const search_countries = async function(req, res) {
   // Return all countries that match the given search query with parameters defaulted to those specified in API spec ordered by name (ascending)
-  const country_name = req.query.title ?? '';
+  const country_name = req.query.country_name ?? '';
 
   if (!country_name) {
     connection.query(`
@@ -136,10 +136,39 @@ const albums = async function(req, res) {
   res.json([]); // replace this with your implementation
 }
 
-// Route 6: GET /album_songs/:album_id
-const album_songs = async function(req, res) {
-  // TODO (TASK 7): implement a route that given an album_id, returns all songs on that album ordered by track number (ascending)
-  res.json([]); // replace this with your implementation
+// Route 6: GET /search_cities
+const search_cities = async function(req, res) {
+  // Return all cities that match the given search query with parameters defaulted to those specified in API spec ordered by name (ascending)
+  const city_name = req.query.city_name ?? '';
+
+  if (!city_name) {
+    connection.query(`
+      SELECT city, country, city_population, city_latitude, city_longitude
+      FROM cities
+      ORDER BY city ASC
+    `, (err, data) => {
+      if (err) {
+        console.log(err);
+        res.json({});
+      } else {
+        res.json(data.rows);
+      }
+    });
+  } else {
+    connection.query(`
+      SELECT city, country, city_population, city_latitude, city_longitude
+      FROM cities
+      WHERE (city LIKE '%${city_name}%')
+      ORDER BY city ASC
+    `, (err, data) => {
+      if (err) {
+        console.log(err);
+        res.json({});
+      } else {
+        res.json(data.rows);
+      }
+    });
+  }
 }
 
 /************************
