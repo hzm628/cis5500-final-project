@@ -491,7 +491,9 @@ const preference_search = async function (req, res) {
           summer_temp st
       JOIN 
           winter_temp wt 
-          ON st.city = wt.city AND st.country = wt.country AND st.state = wt.state
+          ON st.city = wt.city 
+            AND st.country = wt.country 
+            AND (st.state = wt.state OR st.state IS NULL AND wt.state IS NULL)
       JOIN 
           population_data pd 
           ON st.city = pd.city AND st.country = pd.country
@@ -592,7 +594,9 @@ const preference_search = async function (req, res) {
           summer_temp st
       JOIN 
           winter_temp wt 
-          ON st.city = wt.city AND st.country = wt.country AND st.state = wt.state
+          ON st.city = wt.city 
+            AND st.country = wt.country 
+            AND (st.state = wt.state OR st.state IS NULL AND wt.state IS NULL)
       JOIN 
           population_data pd 
           ON st.city = pd.city AND st.country = pd.country
