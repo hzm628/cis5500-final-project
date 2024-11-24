@@ -221,34 +221,40 @@ const compare_cities = async function(req, res) {
   });
 }
 
+<<<<<<< Updated upstream
 // Route 3:  GET /country/:country_name
    const country = async function (req, res) {
     const country_name = req.query.country_name ?? '';
+=======
+// Route 3: GET /country/:country_name
+  const country = async function (req, res) {
+    const country_name = req.query.country_name ?? 'United States';
+>>>>>>> Stashed changes
     
     connection.query(`
       SELECT country_name,
-             CASE WHEN agricultural_land IS NULL THEN -1 ELSE agricultural_land END AS agricultural_land,
-             CASE WHEN land_area IS NULL THEN - 1 ELSE land_area END AS land_area,
-             CASE WHEN birth_rate IS NULL THEN -1 ELSE birth_rate END AS birth_rate,
-             CASE WHEN co2_emissions IS NULL THEN -1 ELSE co2_emissions END AS co2_emissions,
-             CASE WHEN fertility_rate IS NULL THEN -1 ELSE fertility_rate END AS fertility_rate,
-             CAS E WHEN forested_area IS NULL THEN -1 ELSE forested_area END AS forested_area,
-             CASE WHEN gasoline_price IS NULL THEN -1 ELSE gasoline_price END AS gasoline_price,
-             CASE WHEN gdp IS NULL THEN -1 ELSE gdp END AS gdp,
-             CASE WHEN infant_mortality IS NULL THEN -1 ELSE infant_mortality END AS infant_mortality,
-             CASE WHEN largest_city IS NULL THEN 'N/A' ELSE largest_city END AS largest_city,
-             CASE WHEN life_expectancy IS NULL THEN -1 ELSE life_expectancy END AS life_expectancy,
-             CASE WHEN minimum_wage IS NULL THEN -1 ELSE minimum_wage END AS minimum_wage,
-             CASE WHEN official_language IS NULL THEN 'N/A' ELSE official_language END AS official_language,
-             CASE WHEN healthcare_costs IS NULL THEN -1 ELSE healthcare_costs END AS healthcare_costs,
-             CASE WHEN physicians_per_capita IS NULL THEN -1 ELSE physicians_per_capita END AS physicians_per_capita,
-             CASE WHEN population IS NULL THEN -1 ELSE population END AS population,
-             CASE WHEN tax_rate IS NULL THEN -1 ELSE tax_rate END AS tax_rate,
-             CASE WHEN unemployment_rate IS NULL THEN -1 ELSE unemployment_rate END AS unemployment_rate,
-             CASE WHEN democracy_index IS NULL THEN -1 ELSE democracy_index END AS democracy_index,
-             CASE WHEN education_index IS NULL THEN -1 ELSE education_index END AS education_index
+        CASE WHEN agricultural_land IS NULL THEN -1 ELSE agricultural_land END AS agricultural_land,
+        CASE WHEN land_area IS NULL THEN - 1 ELSE land_area END AS land_area,
+        CASE WHEN birth_rate IS NULL THEN -1 ELSE birth_rate END AS birth_rate,
+        CASE WHEN co2_emissions IS NULL THEN -1 ELSE co2_emissions END AS co2_emissions,
+        CASE WHEN fertility_rate IS NULL THEN -1 ELSE fertility_rate END AS fertility_rate,
+        CASE WHEN forested_area IS NULL THEN -1 ELSE forested_area END AS forested_area,
+        CASE WHEN gasoline_price IS NULL THEN -1 ELSE gasoline_price END AS gasoline_price,
+        CASE WHEN gdp IS NULL THEN -1 ELSE gdp END AS gdp,
+        CASE WHEN infant_mortality IS NULL THEN -1 ELSE infant_mortality END AS infant_mortality,
+        CASE WHEN largest_city IS NULL THEN 'N/A' ELSE largest_city END AS largest_city,
+        CASE WHEN life_expectancy IS NULL THEN -1 ELSE life_expectancy END AS life_expectancy,
+        CASE WHEN minimum_wage IS NULL THEN -1 ELSE minimum_wage END AS minimum_wage,
+        CASE WHEN official_language IS NULL THEN 'N/A' ELSE official_language END AS official_language,
+        CASE WHEN healthcare_costs IS NULL THEN -1 ELSE healthcare_costs END AS healthcare_costs,
+        CASE WHEN physicians_per_capita IS NULL THEN -1 ELSE physicians_per_capita END AS physicians_per_capita,
+        CASE WHEN population IS NULL THEN -1 ELSE population END AS population,
+        CASE WHEN tax_rate IS NULL THEN -1 ELSE tax_rate END AS tax_rate,
+        CASE WHEN unemployment_rate IS NULL THEN -1 ELSE unemployment_rate END AS unemployment_rate,
+        CASE WHEN democracy_index IS NULL THEN -1 ELSE democracy_index END AS democracy_index,
+        CASE WHEN education_index IS NULL THEN -1 ELSE education_index END AS education_index
       FROM country
-      WHERE country = '${country_name}'
+      WHERE country = '${country_name}'; 
       `, (err, data) => {
        if (err) {
         console.log(err);
@@ -257,7 +263,7 @@ const compare_cities = async function(req, res) {
         res.json(data.rows[0]);
       }
     });
-  }
+  } 
 
 // Route 4: GET /search_countries
 const search_countries = async function(req, res) {
@@ -479,7 +485,9 @@ const preference_search = async function (req, res) {
           summer_temp st
       JOIN 
           winter_temp wt 
-          ON st.city = wt.city AND st.country = wt.country AND st.state = wt.state
+          ON st.city = wt.city 
+            AND st.country = wt.country 
+            AND (st.state = wt.state OR st.state IS NULL AND wt.state IS NULL)
       JOIN 
           population_data pd 
           ON st.city = pd.city AND st.country = pd.country
@@ -579,7 +587,9 @@ const preference_search = async function (req, res) {
           summer_temp st
       JOIN 
           winter_temp wt 
-          ON st.city = wt.city AND st.country = wt.country AND st.state = wt.state
+          ON st.city = wt.city 
+            AND st.country = wt.country 
+            AND (st.state = wt.state OR st.state IS NULL AND wt.state IS NULL)
       JOIN 
           population_data pd 
           ON st.city = pd.city AND st.country = pd.country

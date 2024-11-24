@@ -18,6 +18,7 @@ app.get('/preference_search', routes.preference_search);
 app.get('/largest_cities', routes.largest_cities);
 app.get('/cheapest_cities', routes.cheapest_cities);
 
+
 app.listen(config.server_port, () => {
   console.log(`Server running at http://${config.server_host}:${config.server_port}/`)
 });
