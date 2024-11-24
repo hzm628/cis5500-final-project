@@ -18,6 +18,7 @@ const connection = new Pool({
 });
 connection.connect((err) => err && console.log(err));
 
+
 // Route 1: GET /similar_cities
 const similar_cities = async function(req, res) {
   const city_name = req.query.city_name ?? '';
@@ -118,9 +119,6 @@ const similar_cities = async function(req, res) {
 
 // Route 2: GET /compare_cities
 const compare_cities = async function(req, res) {
-  // you can use a ternary operator to check the value of request query values
-  // which can be particularly useful for setting the default value of queries
-  // note if users do not provide a value for the query it will be undefined, which is falsey
   const city1 = req.query.city1 ?? 'Philadelphia';
   const country1 = req.query.country1 ?? 'United States';
   const city2 = req.query.city2 ?? 'Boston';
@@ -129,8 +127,6 @@ const compare_cities = async function(req, res) {
   const col1 = `${city1.replace(/ /g, "_")}_${country1.replace(/ /g, "_")}`;
   const col2 = `${city2.replace(/ /g, "_")}_${country2.replace(/ /g, "_")}`;
 
-  // Here is a complete example of how to query the database in JavaScript.
-  // Only a small change (unrelated to querying) is required for TASK 3 in this route.
   connection.query(`
     WITH city_one AS (
         SELECT * FROM cities
@@ -217,11 +213,7 @@ const compare_cities = async function(req, res) {
     SELECT * FROM avg_temperature
   `, (err, data) => {
     if (err) {
-      // If there is an error for some reason, print the error message and
-      // return an empty object instead
       console.log(err);
-      // Be cognizant of the fact we return an empty object {}. For future routes, depending on the
-      // return type you may need to return an empty array [] instead.
       res.json({});
     } else {
       res.json(data.rows)
@@ -229,24 +221,43 @@ const compare_cities = async function(req, res) {
   });
 }
 
-/********************************
- * BASIC SONG/ALBUM INFO ROUTES *
- ********************************/
-
-// Route 3: GET /song/:song_id
-//const song = async function(req, res) {
-//  // TODO (TASK 4): implement a route that given a song_id, returns all information about the song
-//  // Hint: unlike route 2, you can directly SELECT * and just return data.rows[0]
-//  // Most of the code is already written for you, you just need to fill in the query
-//  connection.query(``, (err, data) => {
-//    if (err) {
-//      console.log(err);
-//      res.json({});
-//    } else {
-//      res.json(data.rows[0]);
-//    }
-//  });
-//}
+// Route 3:  GET /country/:country_name
+   const country = async function (req, res) {
+    const country_name = req.query.country_name ?? '';
+    
+    connection.query(`
+      SELECT country_name,
+             CASE WHEN agricultural_land IS NULL THEN -1 ELSE agricultural_land END AS agricultural_land,
+             CASE WHEN land_area IS NULL THEN - 1 ELSE land_area END AS land_area,
+             CASE WHEN birth_rate IS NULL THEN -1 ELSE birth_rate END AS birth_rate,
+             CASE WHEN co2_emissions IS NULL THEN -1 ELSE co2_emissions END AS co2_emissions,
+             CASE WHEN fertility_rate IS NULL THEN -1 ELSE fertility_rate END AS fertility_rate,
+             CAS E WHEN forested_area IS NULL THEN -1 ELSE forested_area END AS forested_area,
+             CASE WHEN gasoline_price IS NULL THEN -1 ELSE gasoline_price END AS gasoline_price,
+             CASE WHEN gdp IS NULL THEN -1 ELSE gdp END AS gdp,
+             CASE WHEN infant_mortality IS NULL THEN -1 ELSE infant_mortality END AS infant_mortality,
+             CASE WHEN largest_city IS NULL THEN 'N/A' ELSE largest_city END AS largest_city,
+             CASE WHEN life_expectancy IS NULL THEN -1 ELSE life_expectancy END AS life_expectancy,
+             CASE WHEN minimum_wage IS NULL THEN -1 ELSE minimum_wage END AS minimum_wage,
+             CASE WHEN official_language IS NULL THEN 'N/A' ELSE official_language END AS official_language,
+             CASE WHEN healthcare_costs IS NULL THEN -1 ELSE healthcare_costs END AS healthcare_costs,
+             CASE WHEN physicians_per_capita IS NULL THEN -1 ELSE physicians_per_capita END AS physicians_per_capita,
+             CASE WHEN population IS NULL THEN -1 ELSE population END AS population,
+             CASE WHEN tax_rate IS NULL THEN -1 ELSE tax_rate END AS tax_rate,
+             CASE WHEN unemployment_rate IS NULL THEN -1 ELSE unemployment_rate END AS unemployment_rate,
+             CASE WHEN democracy_index IS NULL THEN -1 ELSE democracy_index END AS democracy_index,
+             CASE WHEN education_index IS NULL THEN -1 ELSE education_index END AS education_index
+      FROM country
+      WHERE country = '${country_name}'
+      `, (err, data) => {
+       if (err) {
+        console.log(err);
+        res.json({});
+      } else {
+        res.json(data.rows[0]);
+      }
+    });
+  }
 
 // Route 4: GET /search_countries
 const search_countries = async function(req, res) {
@@ -283,12 +294,32 @@ const search_countries = async function(req, res) {
   }
 }
 
-// Route 5: GET /albums
-//const albums = async function(req, res) {
-//  // TODO (TASK 6): implement a route that returns all albums ordered by release date (descending)
-//  // Note that in this case you will need to return multiple albums, so you will need to return an array of objects
-//  res.json([]); // replace this with your implementation
-//}
+// Route 5: GET /city/:city_name
+const city = async function (req, res) {
+  const city_name = req.query.city_name ?? '';
+  
+  connection.query(`
+    SELECT cities.country, cities.city, city_population,
+       CASE WHEN cost_of_living_index IS NULL THEN -1 ELSE cost_of_living_index END AS cost_of_living_index,
+       CASE WHEN rent_index IS NULL THEN -1 ELSE rent_index END AS rent_index,
+       CASE WHEN groceries_index IS NULL THEN -1 ELSE groceries_index END AS groceries_index,
+       CASE WHEN restaurant_price_index IS NULL THEN -1 ELSE restaurant_price_index END AS restaurant_price_index,
+       CASE WHEN ci.crime_index IS NULL THEN -1 ELSE ci.crime_index END AS crime_index,
+       CASE WHEN ci.safety_index IS NULL THEN -1 ELSE ci.safety_index END AS safety_index
+    FROM cities
+    INNER JOIN city_crime_index ci ON ci.city = cities.city
+    INNER JOIN cost_of_living ON cost_of_living.city = cities.city
+    WHERE city = '${city_name}' AND country != 'United States'
+    `, (err, data) => {
+     if (err) {
+      console.log(err);
+      res.json({});
+    } else {
+      res.json(data.rows[0]);
+    }
+  });
+}
+   
 
 // Route 6: GET /search_cities
 const search_cities = async function(req, res) {
@@ -325,26 +356,48 @@ const search_cities = async function(req, res) {
   }
 }
 
-/************************
- * ADVANCED INFO ROUTES *
- ************************/
-
-// Route 7: GET /top_songs
-//const top_songs = async function(req, res) {
-//  const page = req.query.page;
-//  // TODO (TASK 8): use the ternary (or nullish) operator to set the pageSize based on the query or default to 10
-//  const pageSize = undefined;
-//
-//  if (!page) {
-//    // TODO (TASK 9)): query the database and return all songs ordered by number of plays (descending)
-//    // Hint: you will need to use a JOIN to get the album title as well
-//    res.json([]); // replace this with your implementation
-//  } else {
-//    // TODO (TASK 10): reimplement TASK 9 with pagination
-//    // Hint: use LIMIT and OFFSET (see https://www.w3schools.com/php/php_mysql_select_limit.asp)
-//    res.json([]); // replace this with your implementation
-//  }
-//}
+// Route 7: GET /city_us/:city_name
+const city_us = async function (req, res) {
+  const city_name = req.query.city_name ?? '';
+  
+  connection.query(`
+    WITH numSchools AS (
+    SELECT city, COUNT(*) AS num_schools
+    FROM schools
+    GROUP BY city
+    )
+    SELECT
+      cities.country,
+      cities.city,
+      city_population,
+      CASE WHEN cost_of_living_index IS NULL THEN -1 ELSE cost_of_living_index END AS cost_of_living_index,
+      CASE WHEN rent_index IS NULL THEN -1 ELSE rent_index END AS rent_index,
+      CASE WHEN groceries_index IS NULL THEN -1 ELSE groceries_index END AS groceries_index,
+      CASE WHEN restaurant_price_index IS NULL THEN -1 ELSE restaurant_price_index END AS restaurant_price_index,
+      CASE WHEN ci.crime_index IS NULL THEN -1 ELSE ci.crime_index END AS crime_index,
+      CASE WHEN ci.safety_index IS NULL THEN -1 ELSE ci.safety_index END AS safety_index,
+      CASE WHEN violent_crime IS NULL THEN -1 ELSE violent_crime END AS violent_crime,
+      CASE WHEN total_crime IS NULL THEN -1 ELSE total_crime END AS total_crime,
+      CASE WHEN homeprice IS NULL THEN -1 ELSE homeprice END AS homeprice,
+      CASE WHEN n.num_schools IS NULL THEN -1 ELSE n.num_schools END AS num_schools,
+      CASE WHEN cdc.percent IS NULL THEN -1 ELSE cdc.percent END AS percent
+    FROM cities
+    INNER JOIN city_crime_index ci ON ci.city = cities.city
+    INNER JOIN cost_of_living ON cost_of_living.city = cities.city
+    INNER JOIN zillow_home_prices z ON z.city = cities.city
+    INNER JOIN us_crime u ON u.city = cities.city
+    INNER JOIN numSchools n ON n.city = cities.city
+    INNER JOIN cdc_local_health_data cdc ON cdc.location = cities.city;
+    WHERE city = '${city_name}' AND country = 'United States'
+    `, (err, data) => {
+     if (err) {
+      console.log(err);
+      res.json({});
+    } else {
+      res.json(data.rows[0]);
+    }
+  });
+}
 
 
 // Route 8: GET /preference_search
@@ -360,10 +413,6 @@ const preference_search = async function (req, res) {
   const minSafetyIndex = req.query.min_safety_index ?? 0;
   const maxCostOfLivingIndex = req.query.max_cost_of_living_index ?? 9999;
   const maxTerrorismDeaths = req.query.max_terrorism_deaths ?? 9999;
-
-  // optional pagination
-  const page = req.query.page;
-  const pageSize = req.query.page_size ?? 10;
 
   if (!page) {
     connection.query(`
@@ -750,5 +799,8 @@ module.exports = {
   search_countries,
   preference_search,
   largest_cities,
-  cheapest_cities
+  cheapest_cities,
+  country,
+  city,
+  city_us
 }
