@@ -306,23 +306,23 @@ const city = async function (req, res) {
     SELECT DISTINCT ON (city, country) * FROM cities
     ORDER BY city, country, city_population DESC
     )
-    SELECT cities.country, cities.city, city_population,
+    SELECT DISTINCT cities.country, cities.city, city_population,
        CASE WHEN cost_of_living_index IS NULL THEN -1 ELSE cost_of_living_index END AS cost_of_living_index,
        CASE WHEN rent_index IS NULL THEN -1 ELSE rent_index END AS rent_index,
        CASE WHEN groceries_index IS NULL THEN -1 ELSE groceries_index END AS groceries_index,
        CASE WHEN restaurant_price_index IS NULL THEN -1 ELSE restaurant_price_index END AS restaurant_price_index,
        CASE WHEN ci.crime_index IS NULL THEN -1 ELSE ci.crime_index END AS crime_index,
        CASE WHEN ci.safety_index IS NULL THEN -1 ELSE ci.safety_index END AS safety_index
-    FROM city_clean cities
+    FROM city_clean cities 
     INNER JOIN city_crime_index ci ON ci.city = cities.city
     INNER JOIN cost_of_living ON cost_of_living.city = cities.city
-    WHERE city = '${city_name}' AND country != 'United States'
+    WHERE cities.city = '${city_name}' AND cities.country != 'United States';
     `, (err, data) => {
      if (err) {
       console.log(err);
-      res.json({});
+      res.json([]);
     } else {
-      res.json(data.rows[0]);
+      res.json(data.rows);
     }
   });
 }
