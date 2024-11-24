@@ -10,6 +10,8 @@ app.use(cors({
 
 // We use express to define our various API endpoints and
 // provide their handlers that we implemented in routes.js
+app.get('/similar_cities', routes.similar_cities);
+app.get('/compare_cities', routes.compare_cities);
 app.get('/search_cities', routes.search_cities);
 app.get('/search_countries', routes.search_countries);
 app.get('/preference_search', routes.preference_search);
