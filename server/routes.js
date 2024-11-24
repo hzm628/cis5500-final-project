@@ -224,7 +224,7 @@ const compare_cities = async function(req, res) {
   });
 }
 
-// Route 3: GET /country/:country_name
+// Route 3: GET /country
    const country = async function (req, res) {
     const country_name = req.query.country_name ?? '';
     
@@ -235,7 +235,7 @@ const compare_cities = async function(req, res) {
              CASE WHEN birth_rate IS NULL THEN -1 ELSE birth_rate END AS birth_rate,
              CASE WHEN co2_emissions IS NULL THEN -1 ELSE co2_emissions END AS co2_emissions,
              CASE WHEN fertility_rate IS NULL THEN -1 ELSE fertility_rate END AS fertility_rate,
-             CAS E WHEN forested_area IS NULL THEN -1 ELSE forested_area END AS forested_area,
+             CASE WHEN forested_area IS NULL THEN -1 ELSE forested_area END AS forested_area,
              CASE WHEN gasoline_price IS NULL THEN -1 ELSE gasoline_price END AS gasoline_price,
              CASE WHEN gdp IS NULL THEN -1 ELSE gdp END AS gdp,
              CASE WHEN infant_mortality IS NULL THEN -1 ELSE infant_mortality END AS infant_mortality,
@@ -251,13 +251,13 @@ const compare_cities = async function(req, res) {
              CASE WHEN democracy_index IS NULL THEN -1 ELSE democracy_index END AS democracy_index,
              CASE WHEN education_index IS NULL THEN -1 ELSE education_index END AS education_index
       FROM country
-      WHERE country = '${country_name}'
+      WHERE country_name = '${country_name}'
       `, (err, data) => {
        if (err) {
         console.log(err);
         res.json({});
       } else {
-        res.json(data.rows);
+        res.json(data.rows[0]);
       }
     });
   }
@@ -297,11 +297,15 @@ const search_countries = async function(req, res) {
   }
 }
 
-// Route 5: GET /city/:city_name
+// Route 5: GET /city
 const city = async function (req, res) {
   const city_name = req.query.city_name ?? '';
   
   connection.query(`
+    WITH city_clean AS (
+    SELECT DISTINCT ON (city, country) * FROM cities
+    ORDER BY city, country, city_population DESC
+    )
     SELECT cities.country, cities.city, city_population,
        CASE WHEN cost_of_living_index IS NULL THEN -1 ELSE cost_of_living_index END AS cost_of_living_index,
        CASE WHEN rent_index IS NULL THEN -1 ELSE rent_index END AS rent_index,
@@ -309,7 +313,7 @@ const city = async function (req, res) {
        CASE WHEN restaurant_price_index IS NULL THEN -1 ELSE restaurant_price_index END AS restaurant_price_index,
        CASE WHEN ci.crime_index IS NULL THEN -1 ELSE ci.crime_index END AS crime_index,
        CASE WHEN ci.safety_index IS NULL THEN -1 ELSE ci.safety_index END AS safety_index
-    FROM cities
+    FROM city_clean cities
     INNER JOIN city_crime_index ci ON ci.city = cities.city
     INNER JOIN cost_of_living ON cost_of_living.city = cities.city
     WHERE city = '${city_name}' AND country != 'United States'
@@ -318,7 +322,7 @@ const city = async function (req, res) {
       console.log(err);
       res.json({});
     } else {
-      res.json(data.rows);
+      res.json(data.rows[0]);
     }
   });
 }
@@ -359,7 +363,7 @@ const search_cities = async function(req, res) {
   }
 }
 
-// Route 7: GET /city_us/:city_name
+// Route 7: GET /city_us
 const city_us = async function (req, res) {
   const city_name = req.query.city_name ?? '';
   
@@ -368,10 +372,14 @@ const city_us = async function (req, res) {
     SELECT city, COUNT(*) AS num_schools
     FROM schools
     GROUP BY city
-    )
-    SELECT
-      cities.country,
-      cities.city,
+  ),
+  city_clean AS (
+    SELECT DISTINCT ON (city, country) * FROM cities
+    ORDER BY city, country, city_population DESC
+  )
+    SELECT DISTINCT
+      c.country,
+      c.city,
       city_population,
       CASE WHEN cost_of_living_index IS NULL THEN -1 ELSE cost_of_living_index END AS cost_of_living_index,
       CASE WHEN rent_index IS NULL THEN -1 ELSE rent_index END AS rent_index,
@@ -382,22 +390,20 @@ const city_us = async function (req, res) {
       CASE WHEN violent_crime IS NULL THEN -1 ELSE violent_crime END AS violent_crime,
       CASE WHEN total_crime IS NULL THEN -1 ELSE total_crime END AS total_crime,
       CASE WHEN homeprice IS NULL THEN -1 ELSE homeprice END AS homeprice,
-      CASE WHEN n.num_schools IS NULL THEN -1 ELSE n.num_schools END AS num_schools,
       CASE WHEN cdc.percent IS NULL THEN -1 ELSE cdc.percent END AS percent
-    FROM cities
-    INNER JOIN city_crime_index ci ON ci.city = cities.city
-    INNER JOIN cost_of_living ON cost_of_living.city = cities.city
-    INNER JOIN zillow_home_prices z ON z.city = cities.city
-    INNER JOIN us_crime u ON u.city = cities.city
-    INNER JOIN numSchools n ON n.city = cities.city
-    INNER JOIN cdc_local_health_data cdc ON cdc.location = cities.city;
+    FROM city_clean AS c
+    INNER JOIN city_crime_index ci ON ci.city = c.city
+    INNER JOIN cost_of_living ON cost_of_living.city = c.city
+    INNER JOIN zillow_home_prices z ON z.city = c.city
+    INNER JOIN us_crime u ON u.city = c.city
+    INNER JOIN cdc_local_health_data cdc ON cdc.location = c.city;
     WHERE city = '${city_name}' AND country = 'United States'
     `, (err, data) => {
      if (err) {
       console.log(err);
       res.json({});
     } else {
-      res.json(data.rows);
+      res.json(data.rows[0]);
     }
   });
 }
