@@ -94,10 +94,39 @@ const song = async function(req, res) {
   });
 }
 
-// Route 4: GET /album/:album_id
-const album = async function(req, res) {
-  // TODO (TASK 5): implement a route that given a album_id, returns all information about the album
-  res.json({}); // replace this with your implementation
+// Route 4: GET /search_countries
+const search_countries = async function(req, res) {
+  // Return all countries that match the given search query with parameters defaulted to those specified in API spec ordered by name (ascending)
+  const country_name = req.query.title ?? '';
+
+  if (!country_name) {
+    connection.query(`
+      SELECT country_name, population, latitude, longitude
+      FROM country
+      ORDER BY country_name ASC
+    `, (err, data) => {
+      if (err) {
+        console.log(err);
+        res.json({});
+      } else {
+        res.json(data.rows);
+      }
+    });
+  } else {
+    connection.query(`
+      SELECT country_name, population, latitude, longitude
+      FROM country
+      WHERE (country_name LIKE '%${country_name}%')
+      ORDER BY country_name ASC
+    `, (err, data) => {
+      if (err) {
+        console.log(err);
+        res.json({});
+      } else {
+        res.json(data.rows);
+      }
+    });
+  }
 }
 
 // Route 5: GET /albums
