@@ -192,23 +192,248 @@ const top_songs = async function(req, res) {
   }
 }
 
-// Route 8: GET /top_albums
-const top_albums = async function(req, res) {
-  // TODO (TASK 11): return the top albums ordered by aggregate number of plays of all songs on the album (descending), with optional pagination (as in route 7)
-  // Hint: you will need to use a JOIN and aggregation to get the total plays of songs in an album
-  res.json([]); // replace this with your implementation
+// Route 8: GET /preference_search
+const preference_search = async function (req, res) {
+
+  const minSummerTemp = req.query.min_summer_temp ?? -999;
+  const maxSummerTemp = req.query.max_summer_temp ?? 999;
+  const minWinterTemp = req.query.min_winter_temp ?? -999;
+  const maxWinterTemp = req.query.max_winter_temp ?? 999;
+  const minPopulation = req.query.min_population ?? 0;
+  const maxPopulation = req.query.max_population ?? 999999999;
+  const maxCrimeIndex = req.query.max_crime_index ?? 999;
+  const minSafetyIndex = req.query.min_safety_index ?? 0;
+  const maxCostOfLivingIndex = req.query.max_cost_of_living_index ?? 9999;
+  const maxTerrorismDeaths = req.query.max_terrorism_deaths ?? 9999;
+
+  // optional pagination
+  const page = req.query.page;
+  const pageSize = req.query.page_size ?? 10;
+
+  if (!page) {
+    connection.query(`
+      WITH summer_temp AS (
+          SELECT 
+              city, state, country,
+              AVG(avg_temperature) AS avg_summer_temp
+          FROM 
+              city_temperature
+          WHERE 
+              month IN (6, 7, 8)
+          GROUP BY 
+              country, state, city
+      ),
+      winter_temp AS (
+          SELECT 
+              city, state, country,
+              AVG(avg_temperature) AS avg_winter_temp
+          FROM 
+              city_temperature
+          WHERE 
+              month IN (12, 1, 2)
+          GROUP BY 
+              country, state, city
+      ),
+      population_data AS (
+          SELECT 
+              city, country, city_population
+          FROM 
+              cities
+      ),
+      crime_data AS (
+          SELECT 
+              city, country, crime_index, safety_index
+          FROM 
+              city_crime_index
+      ),
+      cost_of_living_data AS (
+          SELECT 
+              city, country, cost_of_living_index
+          FROM 
+              cost_of_living
+      ),
+      terrorism_data AS (
+          SELECT 
+              city, country, SUM(nkill) AS total_deaths_from_terrorism
+          FROM 
+              global_terrorism
+          GROUP BY 
+              city, country
+      )
+      SELECT
+          st.city, 
+          st.state, 
+          st.country, 
+          st.avg_summer_temp, 
+          wt.avg_winter_temp, 
+          pd.city_population, 
+          cd.crime_index, 
+          cd.safety_index, 
+          cld.cost_of_living_index, 
+          td.total_deaths_from_terrorism
+      FROM 
+          summer_temp st
+      JOIN 
+          winter_temp wt 
+          ON st.city = wt.city AND st.country = wt.country AND st.state = wt.state
+      JOIN 
+          population_data pd 
+          ON st.city = pd.city AND st.country = pd.country
+      LEFT JOIN 
+          crime_data cd 
+          ON st.city = cd.city AND st.country = cd.country
+      LEFT JOIN 
+          cost_of_living_data cld 
+          ON st.city = cld.city AND st.country = cld.country
+      LEFT JOIN 
+          terrorism_data td 
+          ON st.city = td.city AND st.country = td.country
+      WHERE 
+          st.avg_summer_temp BETWEEN ${minSummerTemp} AND ${maxSummerTemp}
+          AND wt.avg_winter_temp BETWEEN ${minWinterTemp} AND ${maxWinterTemp}
+          AND pd.city_population >= ${minPopulation}
+          AND pd.city_population <= ${maxPopulation}
+          AND (cd.crime_index IS NULL OR cd.crime_index <= ${maxCrimeIndex})
+          AND (cd.safety_index IS NULL OR cd.safety_index >= ${minSafetyIndex})
+          AND (cld.cost_of_living_index IS NULL OR cld.cost_of_living_index <= ${maxCostOfLivingIndex})
+          AND (td.total_deaths_from_terrorism IS NULL OR td.total_deaths_from_terrorism <= ${maxTerrorismDeaths})
+      ORDER BY 
+          st.avg_summer_temp DESC, 
+          pd.city_population DESC;
+    `, (err, data) => {
+      if (err) {
+        console.log(err);
+        res.json([]);
+      } else {
+        res.json(data.rows);
+      }
+    });
+  } else {
+    
+    const offset = pageSize * (page - 1);
+
+    connection.query(`
+      WITH summer_temp AS (
+          SELECT 
+              city, state, country,
+              AVG(avg_temperature) AS avg_summer_temp
+          FROM 
+              city_temperature
+          WHERE 
+              month IN (6, 7, 8)
+          GROUP BY 
+              country, state, city
+      ),
+      winter_temp AS (
+          SELECT 
+              city, state, country,
+              AVG(avg_temperature) AS avg_winter_temp
+          FROM 
+              city_temperature
+          WHERE 
+              month IN (12, 1, 2)
+          GROUP BY 
+              country, state, city
+      ),
+      population_data AS (
+          SELECT 
+              city, country, city_population
+          FROM 
+              cities
+      ),
+      crime_data AS (
+          SELECT 
+              city, country, crime_index, safety_index
+          FROM 
+              city_crime_index
+      ),
+      cost_of_living_data AS (
+          SELECT 
+              city, country, cost_of_living_index
+          FROM 
+              cost_of_living
+      ),
+      terrorism_data AS (
+          SELECT 
+              city, country, SUM(nkill) AS total_deaths_from_terrorism
+          FROM 
+              global_terrorism
+          GROUP BY 
+              city, country
+      )
+      SELECT
+          st.city, 
+          st.state, 
+          st.country, 
+          st.avg_summer_temp, 
+          wt.avg_winter_temp, 
+          pd.city_population, 
+          cd.crime_index, 
+          cd.safety_index, 
+          cld.cost_of_living_index, 
+          td.total_deaths_from_terrorism
+      FROM 
+          summer_temp st
+      JOIN 
+          winter_temp wt 
+          ON st.city = wt.city AND st.country = wt.country AND st.state = wt.state
+      JOIN 
+          population_data pd 
+          ON st.city = pd.city AND st.country = pd.country
+      LEFT JOIN 
+          crime_data cd 
+          ON st.city = cd.city AND st.country = cd.country
+      LEFT JOIN 
+          cost_of_living_data cld 
+          ON st.city = cld.city AND st.country = cld.country
+      LEFT JOIN 
+          terrorism_data td 
+          ON st.city = td.city AND st.country = td.country
+      WHERE 
+          st.avg_summer_temp BETWEEN ${minSummerTemp} AND ${maxSummerTemp}
+          AND wt.avg_winter_temp BETWEEN ${minWinterTemp} AND ${maxWinterTemp}
+          AND pd.city_population >= ${minPopulation}
+          AND pd.city_population <= ${maxPopulation}
+          AND (cd.crime_index IS NULL OR cd.crime_index <= ${maxCrimeIndex})
+          AND (cd.safety_index IS NULL OR cd.safety_index >= ${minSafetyIndex})
+          AND (cld.cost_of_living_index IS NULL OR cld.cost_of_living_index <= ${maxCostOfLivingIndex})
+          AND (td.total_deaths_from_terrorism IS NULL OR td.total_deaths_from_terrorism <= ${maxTerrorismDeaths})
+      ORDER BY 
+          st.avg_summer_temp DESC, 
+          pd.city_population DESC 
+      LIMIT ${pageSize} OFFSET ${offset};
+    `, (err, data) => {
+      if (err) {
+        console.log(err);
+        res.json([]);
+      } else {
+        res.json(data.rows);
+      }
+    });
+  }
 }
 
-// Route 9: GET /search_albums
-const search_songs = async function(req, res) {
-  // TODO (TASK 12): return all songs that match the given search query with parameters defaulted to those specified in API spec ordered by title (ascending)
-  // Some default parameters have been provided for you, but you will need to fill in the rest
-  const title = req.query.title ?? '';
-  const durationLow = req.query.duration_low ?? 60;
-  const durationHigh = req.query.duration_high ?? 660;
+// Route 9: GET /largest_cities
+const largest_cities = async function (req, res) {
+  const country = req.query.country || '';
 
-  res.json([]); // replace this with your implementation
-}
+  connection.query(`
+    SELECT city, city_population
+    FROM cities
+    WHERE country = '${country}'
+    ORDER BY city_population DESC
+    LIMIT 10;
+    `,
+    (err, data) => {
+      if (err) {
+        console.log(err);
+        res.json([]);
+      } else {
+        res.json(data.rows); 
+      }
+    }
+  );
+}; 
 
 // Route 10: GET /cheapest_cities
 const cheapest_cities = async function(req, res) {
@@ -351,8 +576,8 @@ const cheapest_cities = async function(req, res) {
       WHERE
         SBM.cost_of_living_index <= MVS.median_value
       ORDER BY
-        SBM.cost_of_living_index ASC;
-      LIMIT ${pageSize} OFFSET ${offset}
+        SBM.cost_of_living_index ASC
+      LIMIT ${pageSize} OFFSET ${offset};
     `, (err, data) => {
       if (err) {
         console.log(err);
@@ -364,15 +589,10 @@ const cheapest_cities = async function(req, res) {
   }
 }
 
-
 module.exports = {
-  author,
-  random,
-  song,
-  album,
-  albums,
-  album_songs,
-  top_songs,
-  top_albums,
-  search_songs,
+  search_cities, 
+  search_countries,
+  preference_search,
+  largest_cities,
+  cheapest_cities
 }
