@@ -224,7 +224,7 @@ const compare_cities = async function(req, res) {
   });
 }
 
-// Route 3:  GET /country/:country_name
+// Route 3: GET /country/:country_name
    const country = async function (req, res) {
     const country_name = req.query.country_name ?? '';
     
@@ -416,6 +416,9 @@ const preference_search = async function (req, res) {
   const minSafetyIndex = req.query.min_safety_index ?? 0;
   const maxCostOfLivingIndex = req.query.max_cost_of_living_index ?? 9999;
   const maxTerrorismDeaths = req.query.max_terrorism_deaths ?? 9999;
+
+  const page = req.query.page;
+  const pageSize = req.query.page_size ?? 10;
 
   if (!page) {
     connection.query(`
