@@ -210,6 +210,161 @@ const search_songs = async function(req, res) {
   res.json([]); // replace this with your implementation
 }
 
+// Route 10: GET /cheapest_cities
+const cheapest_cities = async function(req, res) {
+  // Returns the top quartile of cheapest cities in order of cost of living, with the cost of living interpolated/estimated for cities without data. Optionally paginated.
+  const page = req.query.page;
+  const pageSize = req.query.page_size ?? 10;
+
+  if (!page) {
+    connection.query(`
+      WITH country_avg AS (
+        SELECT
+            country,
+            AVG(cost_of_living_index) AS avg_cost_of_living_index
+        FROM
+            cost_of_living
+        GROUP BY
+            country
+        ORDER BY avg_cost_of_living_index DESC
+      ),
+      city_costs AS (
+        SELECT
+            C.country,
+            C.city,
+            COALESCE(
+                COL.cost_of_living_index,
+                CA.avg_cost_of_living_index,
+                (SELECT AVG(cost_of_living_index) FROM cost_of_living)
+            ) AS cost_of_living_index
+        FROM
+            cities C
+        LEFT JOIN 
+            cost_of_living COL ON C.country = COL.country AND C.city = COL.city
+        LEFT JOIN 
+            country_avg CA ON C.country = CA.country
+        ORDER BY cost_of_living_index DESC
+      ),
+      median_value AS (
+        SELECT
+            PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY cost_of_living_index) AS median_value
+        FROM
+            city_costs
+      ),
+      subset_below_median AS (
+        SELECT
+            CC.country,
+            CC.city,
+            CC.cost_of_living_index
+        FROM
+            city_costs CC
+            CROSS JOIN median_value MV
+        WHERE
+            CC.cost_of_living_index <= MV.median_value
+      ),
+      median_value_subset AS (
+        SELECT
+            PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY cost_of_living_index) AS median_value
+        FROM
+            subset_below_median
+      )
+      SELECT
+        SBM.country,
+        SBM.city,
+        SBM.cost_of_living_index
+      FROM
+        subset_below_median SBM
+        CROSS JOIN median_value_subset MVS
+      WHERE
+        SBM.cost_of_living_index <= MVS.median_value
+      ORDER BY
+        SBM.cost_of_living_index ASC;
+    `, (err, data) => {
+      if (err) {
+        console.log(err);
+        res.json({});
+      } else {
+        res.json(data.rows);
+      }
+    });
+  } else {
+    const offset = pageSize * (page - 1)
+
+    connection.query(`
+      WITH country_avg AS (
+        SELECT
+            country,
+            AVG(cost_of_living_index) AS avg_cost_of_living_index
+        FROM
+            cost_of_living
+        GROUP BY
+            country
+        ORDER BY avg_cost_of_living_index DESC
+      ),
+      city_costs AS (
+        SELECT
+            C.country,
+            C.city,
+            COALESCE(
+                COL.cost_of_living_index,
+                CA.avg_cost_of_living_index,
+                (SELECT AVG(cost_of_living_index) FROM cost_of_living)
+            ) AS cost_of_living_index
+        FROM
+            cities C
+        LEFT JOIN 
+            cost_of_living COL ON C.country = COL.country AND C.city = COL.city
+        LEFT JOIN 
+            country_avg CA ON C.country = CA.country
+        ORDER BY cost_of_living_index DESC
+      ),
+      median_value AS (
+        SELECT
+            PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY cost_of_living_index) AS median_value
+        FROM
+            city_costs
+      ),
+      subset_below_median AS (
+        SELECT
+            CC.country,
+            CC.city,
+            CC.cost_of_living_index
+        FROM
+            city_costs CC
+            CROSS JOIN median_value MV
+        WHERE
+            CC.cost_of_living_index <= MV.median_value
+      ),
+      median_value_subset AS (
+        SELECT
+            PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY cost_of_living_index) AS median_value
+        FROM
+            subset_below_median
+      )
+      SELECT
+        SBM.country,
+        SBM.city,
+        SBM.cost_of_living_index
+      FROM
+        subset_below_median SBM
+        CROSS JOIN median_value_subset MVS
+      WHERE
+        SBM.cost_of_living_index <= MVS.median_value
+      ORDER BY
+        SBM.cost_of_living_index ASC;
+      LIMIT ${pageSize} OFFSET ${offset}
+    `, (err, data) => {
+      if (err) {
+        console.log(err);
+        res.json({});
+      } else {
+        res.json(data.rows);
+      }
+    });
+  }
+}
+
+
 module.exports = {
   author,
   random,
