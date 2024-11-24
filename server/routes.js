@@ -18,12 +18,8 @@ const connection = new Pool({
 });
 connection.connect((err) => err && console.log(err));
 
-/******************
- * WARM UP ROUTES *
- ******************/
-
 // Route 1: GET /similar_cities
-similar_cities = async function(req, res) {
+const similar_cities = async function(req, res) {
   const city_name = req.query.city_name ?? '';
   const country_name = req.query.country_name ?? '';
 
@@ -457,7 +453,6 @@ const preference_search = async function (req, res) {
           AND (cld.cost_of_living_index IS NULL OR cld.cost_of_living_index <= ${maxCostOfLivingIndex})
           AND (td.total_deaths_from_terrorism IS NULL OR td.total_deaths_from_terrorism <= ${maxTerrorismDeaths})
       ORDER BY 
-          st.avg_summer_temp DESC, 
           pd.city_population DESC;
     `, (err, data) => {
       if (err) {
@@ -558,7 +553,7 @@ const preference_search = async function (req, res) {
           AND (cld.cost_of_living_index IS NULL OR cld.cost_of_living_index <= ${maxCostOfLivingIndex})
           AND (td.total_deaths_from_terrorism IS NULL OR td.total_deaths_from_terrorism <= ${maxTerrorismDeaths})
       ORDER BY 
-          st.avg_summer_temp DESC, 
+
           pd.city_population DESC 
       LIMIT ${pageSize} OFFSET ${offset};
     `, (err, data) => {
