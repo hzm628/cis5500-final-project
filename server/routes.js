@@ -303,8 +303,17 @@ const city = async function (req, res) {
   
   connection.query(`
     WITH city_clean AS (
-    SELECT DISTINCT ON (city, country) * FROM cities
+    SELECT DISTINCT ON (city, country) *
+    FROM cities
     ORDER BY city, country, city_population DESC
+    ),
+    crime_clean AS (
+    SELECT DISTINCT ON (country, city) * FROM city_crime_index
+    ORDER BY country, city, crime_index DESC, safety_index DESC
+    ),
+    cost_clean AS (
+    SELECT DISTINCT ON (city, country) * FROM cost_of_living
+    ORDER BY city, country, cost_of_living_index DESC
     )
     SELECT DISTINCT cities.country, cities.city, city_population,
        CASE WHEN cost_of_living_index IS NULL THEN -1 ELSE cost_of_living_index END AS cost_of_living_index,
@@ -313,9 +322,9 @@ const city = async function (req, res) {
        CASE WHEN restaurant_price_index IS NULL THEN -1 ELSE restaurant_price_index END AS restaurant_price_index,
        CASE WHEN ci.crime_index IS NULL THEN -1 ELSE ci.crime_index END AS crime_index,
        CASE WHEN ci.safety_index IS NULL THEN -1 ELSE ci.safety_index END AS safety_index
-    FROM city_clean cities 
-    INNER JOIN city_crime_index ci ON ci.city = cities.city
-    INNER JOIN cost_of_living ON cost_of_living.city = cities.city
+    FROM city_clean cities
+    LEFT JOIN crime_clean ci ON ci.city = cities.city AND ci.country = cities.country
+    LEFT JOIN cost_clean cost_of_living ON cost_of_living.city = cities.city
     WHERE cities.city = '${city_name}' AND cities.country != 'United States';
     `, (err, data) => {
      if (err) {
@@ -369,35 +378,54 @@ const city_us = async function (req, res) {
   
   connection.query(`
     WITH numSchools AS (
-    SELECT city, COUNT(*) AS num_schools
+    SELECT LOWER(city) AS city, 'United States' AS country, COUNT(*) AS num_schools
     FROM schools
-    GROUP BY city
-  ),
-  city_clean AS (
-    SELECT DISTINCT ON (city, country) * FROM cities
-    ORDER BY city, country, city_population DESC
-  )
-    SELECT DISTINCT
-      c.country,
-      c.city,
-      city_population,
-      CASE WHEN cost_of_living_index IS NULL THEN -1 ELSE cost_of_living_index END AS cost_of_living_index,
-      CASE WHEN rent_index IS NULL THEN -1 ELSE rent_index END AS rent_index,
-      CASE WHEN groceries_index IS NULL THEN -1 ELSE groceries_index END AS groceries_index,
-      CASE WHEN restaurant_price_index IS NULL THEN -1 ELSE restaurant_price_index END AS restaurant_price_index,
-      CASE WHEN ci.crime_index IS NULL THEN -1 ELSE ci.crime_index END AS crime_index,
-      CASE WHEN ci.safety_index IS NULL THEN -1 ELSE ci.safety_index END AS safety_index,
-      CASE WHEN violent_crime IS NULL THEN -1 ELSE violent_crime END AS violent_crime,
-      CASE WHEN total_crime IS NULL THEN -1 ELSE total_crime END AS total_crime,
-      CASE WHEN homeprice IS NULL THEN -1 ELSE homeprice END AS homeprice,
-      CASE WHEN cdc.percent IS NULL THEN -1 ELSE cdc.percent END AS percent
-    FROM city_clean AS c
-    INNER JOIN city_crime_index ci ON ci.city = c.city
-    INNER JOIN cost_of_living ON cost_of_living.city = c.city
-    INNER JOIN zillow_home_prices z ON z.city = c.city
-    INNER JOIN us_crime u ON u.city = c.city
-    INNER JOIN cdc_local_health_data cdc ON cdc.location = c.city;
-    WHERE city = '${city_name}' AND country = 'United States'
+    GROUP BY LOWER(city), country
+    ),
+    us_crime_clean AS (
+    SELECT LOWER(city) AS city,
+           MAX(total_crime) AS total_crime,
+           MAX(violent_crime) AS violent_crime
+    FROM us_crime
+    GROUP BY LOWER(city)
+    ),
+    cost_clean AS (
+    SELECT LOWER(city) AS city, country,
+           MAX(cost_of_living_index) AS cost_of_living_index,
+           MAX(rent_index) AS rent_index,
+           MAX(groceries_index) AS groceries_index,
+           MAX(restaurant_price_index) AS restaurant_price_index
+    FROM cost_of_living
+    WHERE country LIKE '%United States%'
+    GROUP BY LOWER(city), country
+    ),
+    zillow_clean AS (
+    SELECT LOWER(city) AS city,
+           MAX(homeprice) AS homeprice
+    FROM zillow_home_prices
+    GROUP BY LOWER(city)
+    ),
+    cdc_clean AS (
+    SELECT LOWER(location) AS city,
+           MAX(percent) AS percent
+    FROM cdc_local_health_data
+    GROUP BY LOWER(location)
+    )
+    SELECT  n.city, n.country, n.num_schools,
+    CASE WHEN cost_of_living_index IS NULL THEN -1 ELSE cost_of_living_index END AS cost_of_living_index,
+    CASE WHEN rent_index IS NULL THEN -1 ELSE rent_index END AS rent_index,
+    CASE WHEN groceries_index IS NULL THEN -1 ELSE groceries_index END AS groceries_index,
+    CASE WHEN restaurant_price_index IS NULL THEN -1 ELSE restaurant_price_index END AS restaurant_price_index,
+    CASE WHEN violent_crime IS NULL THEN -1 ELSE violent_crime END AS violent_crime,
+    CASE WHEN total_crime IS NULL THEN -1 ELSE total_crime END AS total_crime,
+    CASE WHEN homeprice IS NULL THEN -1 ELSE homeprice END AS homeprice,
+    CASE WHEN c.percent IS NULL THEN -1 ELSE c.percent END AS percent
+    FROM numSchools n
+    LEFT JOIN us_crime_clean u ON u.city = n.city
+    LEFT JOIN zillow_clean z ON z.city = n.city
+    LEFT JOIN cdc_clean c ON c.city = n.city
+    LEFT JOIN cost_clean cc ON cc.city = n.city
+    WHERE n.city = '${city_name}' AND n.country = 'United States'
     `, (err, data) => {
      if (err) {
       console.log(err);
