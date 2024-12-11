@@ -73,7 +73,7 @@ export default function SearchCitiesPage() {
   return (
     <Container sx={{ mt: 5 }}>
       <Typography variant="h4" gutterBottom textAlign="center">
-        Search Cities by Preferences 
+        Search Cities by Preferences
       </Typography>
       <Typography variant="body1" textAlign="center" sx={{ mb: 4 }}>
         Use the filters below to search for cities based on your preferences, such as climate, population, safety, cost of living, and more. Start exploring the cities that match your ideal criteria!
