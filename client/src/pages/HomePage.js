@@ -1,75 +1,154 @@
-import { useEffect, useState } from 'react';
-import { Container, Divider, Link } from '@mui/material';
-import { NavLink } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import {
+  Container,
+  Typography,
+  Box,
+  Grid,
+  Button,
+  Paper,
+} from '@mui/material';
+import { styled } from '@mui/system';
+import LazyTable from '../components/LazyTable'; 
 
-import LazyTable from '../components/LazyTable';
-import SongCard from '../components/SongCard';
 const config = require('../config.json');
 
+const GradientBox = styled(Box)({
+  background: 'linear-gradient(135deg, #1e3c72, #2a5298)',
+  borderRadius: '15px',
+  padding: '3rem',
+  color: '#fff',
+  textAlign: 'center',
+  boxShadow: '0 4px 15px rgba(0, 0, 0, 0.2)',
+});
+
+const FeatureCard = styled(Paper)({
+  borderRadius: '20px',
+  padding: '2rem',
+  textAlign: 'center',
+  boxShadow: '0 4px 10px rgba(0, 0, 0, 0.2)',
+  height: '220px',
+  display: 'flex',
+  flexDirection: 'column',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  transition: 'transform 0.3s ease, box-shadow 0.3s ease',
+  '&:hover': {
+    transform: 'scale(1.05)',
+    boxShadow: '0 8px 20px rgba(0, 0, 0, 0.3)',
+  },
+});
+
 export default function HomePage() {
-  // We use the setState hook to persist information across renders (such as the result of our API calls)
-  const [songOfTheDay, setSongOfTheDay] = useState({});
-  // TODO (TASK 13): add a state variable to store the app author (default to '')
+  const author = 'Hena Ansari, Zimo Huang, Alex Keri, Augustin Liu';
 
-  const [selectedSongId, setSelectedSongId] = useState(null);
-
-  // The useEffect hook by default runs the provided callback after every render
-  // The second (optional) argument, [], is the dependency array which signals
-  // to the hook to only run the provided callback if the value of the dependency array
-  // changes from the previous render. In this case, an empty array means the callback
-  // will only run on the very first render.
-  useEffect(() => {
-    // Fetch request to get the song of the day. Fetch runs asynchronously.
-    // The .then() method is called when the fetch request is complete
-    // and proceeds to convert the result to a JSON which is finally placed in state.
-    fetch(`http://${config.server_host}:${config.server_port}/random`)
-      .then(res => res.json())
-      .then(resJson => setSongOfTheDay(resJson));
-
-    // TODO (TASK 14): add a fetch call to get the app author (name not pennkey) and store the name field in the state variable
-  }, []);
-
-  // Here, we define the columns of the "Top Songs" table. The songColumns variable is an array (in order)
-  // of objects with each object representing a column. Each object has a "field" property representing
-  // what data field to display from the raw data, "headerName" property representing the column label,
-  // and an optional renderCell property which given a row returns a custom JSX element to display in the cell.
-  const songColumns = [
+  const columns = [
+    { headerName: 'City', field: 'city', minWidth: 300 },
+    { headerName: 'Country', field: 'country', minWidth: 200 },
     {
-      field: 'title',
-      headerName: 'Song Title',
-      renderCell: (row) => <Link onClick={() => setSelectedSongId(row.song_id)}>{row.title}</Link> // A Link component is used just for formatting purposes
-    },
-    {
-      field: 'album',
-      headerName: 'Album Title',
-      renderCell: (row) => <NavLink to={`/albums/${row.album_id}`}>{row.album}</NavLink> // A NavLink component is used to create a link to the album page
-    },
-    {
-      field: 'plays',
-      headerName: 'Plays'
+      headerName: 'Cost of Living Index',
+      field: 'cost_of_living_index',
+      minWidth: 150,
+      renderCell: (row) => row.cost_of_living_index?.toFixed(2) || 'N/A',
     },
   ];
 
-  // TODO (TASK 15): define the columns for the top albums (schema is Album Title, Plays), where Album Title is a link to the album page
-  // Hint: this should be very similar to songColumns defined above, but has 2 columns instead of 3
-  // Hint: recall the schema for an album is different from that of a song (see the API docs for /top_albums). How does that impact the "field" parameter and the "renderCell" function for the album title column?
-  const albumColumns = [
-
-  ]
-
   return (
-    <Container>
-      {/* SongCard is a custom component that we made. selectedSongId && <SongCard .../> makes use of short-circuit logic to only render the SongCard if a non-null song is selected */}
-      {selectedSongId && <SongCard songId={selectedSongId} handleClose={() => setSelectedSongId(null)} />}
-      <h2>Check out your song of the day:&nbsp;
-        <Link onClick={() => setSelectedSongId(songOfTheDay.song_id)}>{songOfTheDay.title}</Link>
-      </h2>
-      <Divider />
-      <h2>Top Songs</h2>
-      <LazyTable route={`http://${config.server_host}:${config.server_port}/top_songs`} columns={songColumns} />
-      <Divider />
-      {/* TODO (TASK 16): add a h2 heading, LazyTable, and divider for top albums. Set the LazyTable's props for defaultPageSize to 5 and rowsPerPageOptions to [5, 10] */}
-      {/* TODO (TASK 17): add a paragraph (<p></p>) that displays “Created by [name]” using the name state stored from TASK 13/TASK 14 */}
+    <Container maxWidth="lg" sx={{ mt: 5, mb: 10 }}>
+      {/* Welcome Section */}
+      <GradientBox>
+        <Typography variant="h2" gutterBottom>
+          Relocation Helper
+        </Typography>
+        <Typography variant="h5" sx={{ mb: 2 }}>
+          Find your perfect place to live!
+        </Typography>
+        <Typography variant="body1">
+          This website helps you find a new place to live based on your preferences, such as climate, crime rate,
+          and cost of living. Explore, compare, and discover the best cities for you!
+        </Typography>
+      </GradientBox>
+
+      {/* Features Section */}
+      <Box sx={{ mt: 5 }}>
+        <Typography variant="h4" gutterBottom textAlign="center">
+          Explore Our Features
+        </Typography>
+        <Grid container spacing={4} justifyContent="center">
+          <Grid item xs={12} md={6} lg={3}>
+            <FeatureCard>
+              <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold' }}>
+                Countries
+              </Typography>
+              <Typography variant="body2" sx={{ mb: 2 }}>
+                Explore all 195 countries in our database and learn about their key details.
+              </Typography>
+              <Button variant="contained" color="primary" href="/countries">
+                Explore
+              </Button>
+            </FeatureCard>
+          </Grid>
+          <Grid item xs={12} md={6} lg={3}>
+            <FeatureCard>
+              <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold' }}>
+                Cities
+              </Typography>
+              <Typography variant="body2" sx={{ mb: 2 }}>
+                Find cities that match your preferences and explore their unique features.
+              </Typography>
+              <Button variant="contained" color="primary" href="/search_cities">
+                Explore
+              </Button>
+            </FeatureCard>
+          </Grid>
+          <Grid item xs={12} md={6} lg={3}>
+            <FeatureCard>
+              <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold' }}>
+                Comparisons
+              </Typography>
+              <Typography variant="body2" sx={{ mb: 2 }}>
+                Compare cities side-by-side to find your best match.
+              </Typography>
+              <Button variant="contained" color="primary" href="/comparisons">
+                Explore
+              </Button>
+            </FeatureCard>
+          </Grid>
+          <Grid item xs={12} md={6} lg={3}>
+            <FeatureCard>
+              <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold' }}>
+                Similarities
+              </Typography>
+              <Typography variant="body2" sx={{ mb: 2 }}>
+                Find cities similar to the ones you love.
+              </Typography>
+              <Button variant="contained" color="primary" href="/similarities">
+                Explore
+              </Button>
+            </FeatureCard>
+          </Grid>
+        </Grid>
+      </Box>
+
+      {/* Teaser: Cheapest Cities */}
+      <Box sx={{ mt: 5 }}>
+        <Typography variant="body1" textAlign="center" sx={{ mb: 3 }}>
+        As a teaser, here's a list of the cheapest cities based on the cost of living, including estimates for cities without available data. Explore the top quartile of affordable cities and find your perfect place to live! 
+        Use the pagination below to browse through the results.
+        </Typography>
+        <LazyTable
+          route={`http://${config.server_host}:${config.server_port}/cheapest_cities`}
+          columns={columns}
+          defaultPageSize={25}
+          rowsPerPageOptions={[10, 25]}
+        />
+      </Box>
+
+      {/* Author Section */}
+      <Box sx={{ textAlign: 'center', mt: 5, color: '#555' }}>
+        <Typography variant="body2">
+          Created by <span style={{ fontWeight: 'bold' }}>{author}</span>
+        </Typography>
+      </Box>
     </Container>
   );
-};
+} 

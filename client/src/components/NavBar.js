@@ -1,18 +1,14 @@
-import { AppBar, Container, Toolbar, Typography } from '@mui/material'
+import { AppBar, Container, Toolbar, Typography } from '@mui/material';
 import { NavLink } from 'react-router-dom';
 
-// The hyperlinks in the NavBar contain a lot of repeated formatting code so a
-// helper component NavText local to the file is defined to prevent repeated code.
 function NavText({ href, text, isMain }) {
   return (
     <Typography
-      variant={isMain ? 'h5' : 'h7'}
+      variant={isMain ? 'h6' : 'body1'}
       noWrap
       style={{
-        marginRight: '30px',
-        fontFamily: 'monospace',
-        fontWeight: 700,
-        letterSpacing: '.3rem',
+        marginRight: '20px',
+        fontWeight: isMain ? 700 : 500,
       }}
     >
       <NavLink
@@ -25,20 +21,19 @@ function NavText({ href, text, isMain }) {
         {text}
       </NavLink>
     </Typography>
-  )
+  );
 }
 
-// Here, we define the NavBar. Note that we heavily leverage MUI components
-// to make the component look nice. Feel free to try changing the formatting
-// props to how it changes the look of the component.
 export default function NavBar() {
   return (
-    <AppBar position='static'>
-      <Container maxWidth='xl'>
+    <AppBar position="static" sx={{ background: 'linear-gradient(90deg, #1e3c72, #2a5298)' }}>
+      <Container maxWidth="xl">
         <Toolbar disableGutters>
-          <NavText href='/' text='SWIFTIFY' isMain />
-          <NavText href='/albums' text='ALBUMS' />
-          <NavText href='/songs' text='SONGS' />
+          <NavText href="/" text="Relocation Helper" isMain />
+          <NavText href="/countries" text="COUNTRIES" />
+          <NavText href="/search_cities" text="CITIES" />
+          <NavText href="/comparisons" text="COMPARISONS" />
+          <NavText href="/similarities" text="SIMILARITIES" />
         </Toolbar>
       </Container>
     </AppBar>

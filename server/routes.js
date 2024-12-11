@@ -2,7 +2,7 @@ const { Pool, types } = require('pg');
 const config = require('./config.json')
 
 // Override the default parsing for BIGINT (PostgreSQL type ID 20)
-types.setTypeParser(20, val => parseInt(val, 10)); //DO NOT DELETE THIS
+types.setTypeParser(20, val => parseInt(val, 10)); //DO NOT DELETE THIS 
 
 // Create PostgreSQL connection using database credentials provided in config.json
 // Do not edit. If the connection fails, make sure to check that config.json is filled out correctly
@@ -335,7 +335,6 @@ const city = async function (req, res) {
     }
   });
 }
-   
 
 // Route 6: GET /search_cities
 const search_cities = async function(req, res) {
@@ -436,7 +435,6 @@ const city_us = async function (req, res) {
   });
 }
 
-
 // Route 8: GET /preference_search
 const preference_search = async function (req, res) {
 
@@ -450,9 +448,22 @@ const preference_search = async function (req, res) {
   const minSafetyIndex = req.query.min_safety_index ?? 0;
   const maxCostOfLivingIndex = req.query.max_cost_of_living_index ?? 9999;
   const maxTerrorismDeaths = req.query.max_terrorism_deaths ?? 9999;
+  const country = req.query.country;
+  const includeMissingData = req.query.include_missing_data === 'true';
 
   const page = req.query.page;
   const pageSize = req.query.page_size ?? 10;
+
+  const countryFilter = country ? `AND st.country = '${country}'` : '';
+
+  const missingDataCondition = includeMissingData
+    ? '' 
+    : `
+      AND cd.crime_index IS NOT NULL 
+      AND cd.safety_index IS NOT NULL 
+      AND cld.cost_of_living_index IS NOT NULL 
+      AND td.total_deaths_from_terrorism IS NOT NULL 
+    `;
 
   if (!page) {
     connection.query(`
@@ -521,7 +532,10 @@ const preference_search = async function (req, res) {
           winter_temp wt 
           ON st.city = wt.city 
             AND st.country = wt.country 
-            AND (st.state = wt.state OR st.state IS NULL AND wt.state IS NULL)
+            AND (
+              (st.state = wt.state)
+              OR (st.state IS NULL AND wt.state IS NULL)
+            )
       JOIN 
           population_data pd 
           ON st.city = pd.city AND st.country = pd.country
@@ -543,8 +557,9 @@ const preference_search = async function (req, res) {
           AND (cd.safety_index IS NULL OR cd.safety_index >= ${minSafetyIndex})
           AND (cld.cost_of_living_index IS NULL OR cld.cost_of_living_index <= ${maxCostOfLivingIndex})
           AND (td.total_deaths_from_terrorism IS NULL OR td.total_deaths_from_terrorism <= ${maxTerrorismDeaths})
+          ${countryFilter}
+          ${missingDataCondition}
       ORDER BY 
-          st.avg_summer_temp DESC, 
           pd.city_population DESC;
     `, (err, data) => {
       if (err) {
@@ -624,7 +639,10 @@ const preference_search = async function (req, res) {
           winter_temp wt 
           ON st.city = wt.city 
             AND st.country = wt.country 
-            AND (st.state = wt.state OR st.state IS NULL AND wt.state IS NULL)
+            AND (
+              (st.state = wt.state)
+              OR (st.state IS NULL AND wt.state IS NULL)
+            )
       JOIN 
           population_data pd 
           ON st.city = pd.city AND st.country = pd.country
@@ -646,8 +664,9 @@ const preference_search = async function (req, res) {
           AND (cd.safety_index IS NULL OR cd.safety_index >= ${minSafetyIndex})
           AND (cld.cost_of_living_index IS NULL OR cld.cost_of_living_index <= ${maxCostOfLivingIndex})
           AND (td.total_deaths_from_terrorism IS NULL OR td.total_deaths_from_terrorism <= ${maxTerrorismDeaths})
+          ${countryFilter}
+          ${missingDataCondition}
       ORDER BY 
-          st.avg_summer_temp DESC, 
           pd.city_population DESC 
       LIMIT ${pageSize} OFFSET ${offset};
     `, (err, data) => {
@@ -687,7 +706,7 @@ const largest_cities = async function (req, res) {
 const cheapest_cities = async function(req, res) {
   // Returns the top quartile of cheapest cities in order of cost of living, with the cost of living interpolated/estimated for cities without data. Optionally paginated.
   const page = req.query.page;
-  const pageSize = req.query.page_size ?? 10;
+  const pageSize = req.query.page_size ?? 10; 
 
   if (!page) {
     connection.query(`
