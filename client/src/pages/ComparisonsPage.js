@@ -117,43 +117,49 @@ const ComparisonsPage = () => {
         Compare two cities across various features and visualize the results.
       </Typography>
 
-      <Box sx={{ mb: 5, display: "flex", justifyContent: "center", alignItems: "center", gap: 2, flexWrap: "wrap" }}>
-        <TextField
-          label="Enter City 1"
-          variant="outlined"
-          value={city1}
-          onChange={(e) => setCity1(e.target.value)}
-          sx={{ width: "30%" }}
-        />
-        <TextField
-          label="Enter Country 1"
-          variant="outlined"
-          value={country1}
-          onChange={(e) => setCountry1(e.target.value)}
-          sx={{ width: "30%" }}
-        />
-        <TextField
-          label="Enter City 2"
-          variant="outlined"
-          value={city2}
-          onChange={(e) => setCity2(e.target.value)}
-          sx={{ width: "30%" }}
-        />
-        <TextField
-          label="Enter Country 2"
-          variant="outlined"
-          value={country2}
-          onChange={(e) => setCountry2(e.target.value)}
-          sx={{ width: "30%" }}
-        />
-        <Button
-          variant="contained"
-          color="primary"
-          onClick={handleCompare}
-          disabled={isLoading}
-        >
-          {isLoading ? <CircularProgress size={24} /> : "Compare"}
-        </Button>
+      <Box sx={{ mb: 5 }}>
+        <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 2, flexWrap: "wrap" }}>
+          <TextField
+            label="Enter City 1"
+            variant="outlined"
+            value={city1}
+            onChange={(e) => setCity1(e.target.value)}
+            sx={{ width: "30%" }}
+          />
+          <TextField
+            label="Enter Country 1"
+            variant="outlined"
+            value={country1}
+            onChange={(e) => setCountry1(e.target.value)}
+            sx={{ width: "30%" }}
+          />
+        </Box>
+        <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 2, flexWrap: "wrap", mt: 2 }}>
+          <TextField
+            label="Enter City 2"
+            variant="outlined"
+            value={city2}
+            onChange={(e) => setCity2(e.target.value)}
+            sx={{ width: "30%" }}
+          />
+          <TextField
+            label="Enter Country 2"
+            variant="outlined"
+            value={country2}
+            onChange={(e) => setCountry2(e.target.value)}
+            sx={{ width: "30%" }}
+          />
+        </Box>
+        <Box sx={{ display: "flex", justifyContent: "center", mt: 3 }}>
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={handleCompare}
+            disabled={isLoading}
+          >
+            {isLoading ? <CircularProgress size={24} /> : "Compare"}
+          </Button>
+        </Box>
       </Box>
 
       {error && (

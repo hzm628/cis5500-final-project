@@ -8,6 +8,7 @@ import HomePage from './pages/HomePage';
 import CountriesPage from './pages/CountriesPage';
 import SearchCitiesPage from './pages/SearchCitiesPage';
 import ComparisonsPage from './pages/ComparisonsPage';
+import SimilaritiesPage from './pages/SimilaritiesPage';
 
 export const theme = createTheme({
   palette: {
@@ -27,6 +28,7 @@ export default function App() {
           <Route path="/countries" element={<CountriesPage />} />
           <Route path="/search_cities" element={<SearchCitiesPage />} />
           <Route path="/comparisons" element={<ComparisonsPage />} />
+          <Route path="/similarities" element={<SimilaritiesPage />} />
         </Routes>
       </BrowserRouter>
     </ThemeProvider>
