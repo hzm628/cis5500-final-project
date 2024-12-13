@@ -12,16 +12,15 @@ import LazyTable from '../components/LazyTable';
 
 const config = require('../config.json');
 
-const GradientBox = styled(Box)({
-  background: 'linear-gradient(135deg, #1e3c72, #2a5298)',
+const GradientBox = styled(Box)(({ theme }) => ({
+  background: `linear-gradient(135deg, ${theme.palette.primary.light}, ${theme.palette.primary.dark})`,
   borderRadius: '15px',
   padding: '3rem',
-  color: '#fff',
+  color: theme.palette.primary.contrastText,
   textAlign: 'center',
-  boxShadow: '0 4px 15px rgba(0, 0, 0, 0.2)',
-});
+}));
 
-const FeatureCard = styled(Paper)({
+const FeatureCard = styled(Paper)({  
   borderRadius: '20px',
   padding: '2rem',
   textAlign: 'center',
@@ -66,7 +65,7 @@ export default function HomePage() {
           This website helps you find a new place to live based on your preferences, such as climate, crime rate,
           and cost of living. Explore, compare, and discover the best cities for you!
         </Typography>
-      </GradientBox>
+      </GradientBox> 
 
       {/* Features Section */}
       <Box sx={{ mt: 5 }}>

@@ -1,4 +1,4 @@
-import { AppBar, Container, Toolbar, Typography } from '@mui/material';
+import { AppBar, Container, Toolbar, Typography, useTheme } from '@mui/material';
 import { NavLink } from 'react-router-dom';
 
 function NavText({ href, text, isMain }) {
@@ -25,8 +25,16 @@ function NavText({ href, text, isMain }) {
 }
 
 export default function NavBar() {
+  const theme = useTheme();
+
   return (
-    <AppBar position="static" sx={{ background: 'linear-gradient(90deg, #1e3c72, #2a5298)' }}>
+    <AppBar
+      position="static"
+      sx={{
+        background: `linear-gradient(90deg, ${theme.palette.primary.light}, ${theme.palette.primary.dark})`,
+        boxShadow: '0 4px 15px rgba(0, 0, 0, 0.2)',
+      }}
+    >
       <Container maxWidth="xl">
         <Toolbar disableGutters>
           <NavText href="/" text="Relocation Helper" isMain />
