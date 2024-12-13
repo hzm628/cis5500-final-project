@@ -402,26 +402,26 @@ const preference_search = async function (req, res) {
     connection.query(`
       WITH summer_temp AS (
           SELECT 
-              city, state, country,
+              city, country,
               AVG(avg_temperature) AS avg_summer_temp
           FROM 
               city_temperature
           WHERE 
               month IN (6, 7, 8)
           GROUP BY 
-              country, state, city
+              country, city
       ),
       winter_temp AS (
           SELECT 
-              city, state, country,
+              city, country,
               AVG(avg_temperature) AS avg_winter_temp
           FROM 
               city_temperature
           WHERE 
               month IN (12, 1, 2)
           GROUP BY 
-              country, state, city
-      ),
+              country, city
+      ), 
       population_data AS (
           SELECT 
               city, country, city_population
@@ -447,10 +447,9 @@ const preference_search = async function (req, res) {
               global_terrorism
           GROUP BY 
               city, country
-      )
+      ) 
       SELECT
           st.city, 
-          st.state, 
           st.country, 
           st.avg_summer_temp, 
           wt.avg_winter_temp, 
@@ -463,7 +462,7 @@ const preference_search = async function (req, res) {
           summer_temp st
       JOIN 
           winter_temp wt 
-          ON st.city = wt.city AND st.country = wt.country AND st.state = wt.state
+          ON st.city = wt.city AND st.country = wt.country
       JOIN 
           population_data pd 
           ON st.city = pd.city AND st.country = pd.country
@@ -475,7 +474,7 @@ const preference_search = async function (req, res) {
           ON st.city = cld.city AND st.country = cld.country
       LEFT JOIN 
           terrorism_data td 
-          ON st.city = td.city AND st.country = td.country
+          ON st.city = td.city AND st.country = td.country 
       WHERE 
           st.avg_summer_temp BETWEEN ${minSummerTemp} AND ${maxSummerTemp}
           AND wt.avg_winter_temp BETWEEN ${minWinterTemp} AND ${maxWinterTemp}
@@ -488,7 +487,7 @@ const preference_search = async function (req, res) {
       ORDER BY 
           st.avg_summer_temp DESC, 
           pd.city_population DESC;
-    `, (err, data) => {
+    `, (err, data) => { 
       if (err) {
         console.log(err);
         res.json([]);
@@ -503,25 +502,25 @@ const preference_search = async function (req, res) {
     connection.query(`
       WITH summer_temp AS (
           SELECT 
-              city, state, country,
+              city, country,
               AVG(avg_temperature) AS avg_summer_temp
           FROM 
               city_temperature
           WHERE 
               month IN (6, 7, 8)
           GROUP BY 
-              country, state, city
+              country, city
       ),
       winter_temp AS (
           SELECT 
-              city, state, country,
+              city, country,
               AVG(avg_temperature) AS avg_winter_temp
           FROM 
               city_temperature
           WHERE 
               month IN (12, 1, 2)
           GROUP BY 
-              country, state, city
+              country, city
       ),
       population_data AS (
           SELECT 
@@ -551,7 +550,6 @@ const preference_search = async function (req, res) {
       )
       SELECT
           st.city, 
-          st.state, 
           st.country, 
           st.avg_summer_temp, 
           wt.avg_winter_temp, 
@@ -564,7 +562,7 @@ const preference_search = async function (req, res) {
           summer_temp st
       JOIN 
           winter_temp wt 
-          ON st.city = wt.city AND st.country = wt.country AND st.state = wt.state
+          ON st.city = wt.city AND st.country = wt.country
       JOIN 
           population_data pd 
           ON st.city = pd.city AND st.country = pd.country
