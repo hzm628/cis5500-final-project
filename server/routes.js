@@ -230,7 +230,7 @@ const compare_cities = async function(req, res) {
              CASE WHEN democracy_index IS NULL THEN -1 ELSE democracy_index END AS democracy_index,
              CASE WHEN education_index IS NULL THEN -1 ELSE education_index END AS education_index
       FROM country
-      WHERE country = '${country_name}' 
+      WHERE LOWER(country.country_name) = LOWER('${country_name}'); 
       `, (err, data) => {
        if (err) {
         console.log(err);
@@ -402,7 +402,8 @@ const preference_search = async function (req, res) {
   const page = req.query.page;
   const pageSize = req.query.page_size ?? 10;
 
-  const countryFilter = country ? `AND st.country = '${country}'` : '';
+  const countryFilter = country ? `AND LOWER(st.country) = LOWER('${country}')` : '';
+
   const missingDataCondition = includeMissingData
     ? '' 
     : `

@@ -118,7 +118,7 @@ export default function CountriesPage() {
                       navigate(`/search_cities?country=${encodeURIComponent(country.country_name)}`);
                     }} 
                   >
-                    Explore Cities
+                    Explore Cities 
                   </Button>
                 </Box> 
               </CountryCard>
