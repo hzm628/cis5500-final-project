@@ -214,7 +214,7 @@ const compare_cities = async function(req, res) {
              CASE WHEN birth_rate IS NULL THEN -1 ELSE birth_rate END AS birth_rate,
              CASE WHEN co2_emissions IS NULL THEN -1 ELSE co2_emissions END AS co2_emissions,
              CASE WHEN fertility_rate IS NULL THEN -1 ELSE fertility_rate END AS fertility_rate,
-             CAS E WHEN forested_area IS NULL THEN -1 ELSE forested_area END AS forested_area,
+             CASE WHEN forested_area IS NULL THEN -1 ELSE forested_area END AS forested_area,
              CASE WHEN gasoline_price IS NULL THEN -1 ELSE gasoline_price END AS gasoline_price,
              CASE WHEN gdp IS NULL THEN -1 ELSE gdp END AS gdp,
              CASE WHEN infant_mortality IS NULL THEN -1 ELSE infant_mortality END AS infant_mortality,
