@@ -2,7 +2,7 @@ const { Pool, types } = require('pg');
 const config = require('./config.json')
 
 // Override the default parsing for BIGINT (PostgreSQL type ID 20)
-types.setTypeParser(20, val => parseInt(val, 10)); //DO NOT DELETE THIS 
+types.setTypeParser(20, val => parseInt(val, 10)); //DO NOT DELETE THIS
 
 // Create PostgreSQL connection using database credentials provided in config.json
 // Do not edit. If the connection fails, make sure to check that config.json is filled out correctly
@@ -23,102 +23,81 @@ connection.connect((err) => err && console.log(err));
  ******************/
 
 // Route 1: GET /similar_cities
-similar_cities = async function(req, res) {
-  const city_name = req.query.city_name ?? '';
-  const country_name = req.query.country_name ?? '';
+const similar_cities = async function (req, res) {
+  try {
+    const city_name = req.query.city_name ?? '';
+    const country_name = req.query.country_name ?? '';
 
-  if (city_name && country_name) {
-      connection.query(`
-             WITH city_clean AS (
-                 SELECT DISTINCT ON (city, country) * FROM cities
-                 ORDER BY city, country, city_population DESC
-             ), attacks_by_city AS (
-                            SELECT city, COUNT(*) AS num_attacks, SUM(nkill) AS num_deaths, SUM(nwound) AS num_injured
-                            FROM global_terrorism
-                            GROUP BY city
-                          ),
-                          city_quantiles AS (
-                            SELECT
-                                a.city, a.country, a.city_population AS population,
-                                NTILE(100) OVER (ORDER BY a.city_population) AS city_pop_quantile,
-                                NTILE(100) OVER (ORDER BY a.city_latitude) AS latitude_quantile,
-                                NTILE(100) OVER (ORDER BY a.city_longitude) AS longitude_quantile,
-                                NTILE(100) OVER (ORDER BY b.population) AS country_pop_quantile,
-                                NTILE(100) OVER (ORDER BY c.num_attacks) AS terrorism_quantile,
-                                NTILE(100) OVER (ORDER BY c.num_deaths) AS terrorism_deaths_quantile,
-                                NTILE(100) OVER (ORDER BY c.num_injured) AS terrorism_injured_quantile
-                            FROM city_clean a JOIN country b
-                            ON (a.country = b.country_name)
-                            JOIN attacks_by_city c
-                            ON (a.city = c.city)
-                            WHERE c.num_attacks > 0
-                            AND ((a.city = '${city_name}' AND a.country = '${country_name}')
-                            OR (a.city_population > 100000))
-                          )
-                          SELECT a.city as city_1, a.country as country_1, b.city as city_2, b.country as country_2,
-                               ROUND(100 - (ABS(a.city_pop_quantile - b.city_pop_quantile) + ABS(a.latitude_quantile - b.latitude_quantile) +
-                                ABS(a.longitude_quantile - b.longitude_quantile) +  ABS(a.country_pop_quantile - b.country_pop_quantile) +
-                                ABS(a.terrorism_quantile - b.terrorism_quantile) + ABS(a.terrorism_deaths_quantile - b.terrorism_deaths_quantile) +
-                                      ABS(a.terrorism_injured_quantile - b.terrorism_injured_quantile)) / 7.0, 2) AS similarity_score
-                          FROM (
-                              SELECT * FROM city_quantiles x
-                              WHERE x.city = '${city_name}' AND x.country = '${country_name}') a, city_quantiles b
-                          WHERE (a.city <> b.city OR a.country <> b.country)
-                          ORDER BY similarity_score DESC, a.population + b.population DESC
-           `, (err, data) => {
-             if (err) {
-               console.log(err);
-               res.json({});
-             } else {
-               res.json(data.rows);
-             }
-           });
+    // Log the variables after they are initialized
+    console.log("Request received for /similar_cities:", { city_name, country_name });
+
+    if (city_name && country_name) {
+      connection.query(
+        `
+        WITH city_clean AS (
+          SELECT DISTINCT ON (city, country) * FROM cities
+          ORDER BY city, country, city_population DESC
+        ),
+        attacks_by_city AS (
+          SELECT city, COUNT(*) AS num_attacks, SUM(nkill) AS num_deaths, SUM(nwound) AS num_injured
+          FROM global_terrorism
+          GROUP BY city
+        ),
+        city_quantiles AS (
+          SELECT
+            a.city, a.country, a.city_population AS population,
+            NTILE(100) OVER (ORDER BY a.city_population) AS city_pop_quantile,
+            NTILE(100) OVER (ORDER BY a.city_latitude) AS latitude_quantile,
+            NTILE(100) OVER (ORDER BY a.city_longitude) AS longitude_quantile,
+            NTILE(100) OVER (ORDER BY b.population) AS country_pop_quantile,
+            NTILE(100) OVER (ORDER BY c.num_attacks) AS terrorism_quantile,
+            NTILE(100) OVER (ORDER BY c.num_deaths) AS terrorism_deaths_quantile,
+            NTILE(100) OVER (ORDER BY c.num_injured) AS terrorism_injured_quantile
+          FROM city_clean a
+          JOIN country b ON (a.country = b.country_name)
+          JOIN attacks_by_city c ON (a.city = c.city)
+          WHERE c.num_attacks > 0
+            AND ((a.city = $1 AND a.country = $2) OR (a.city_population > 100000))
+        )
+        SELECT 
+          a.city AS city_1, a.country AS country_1, 
+          b.city AS city_2, b.country AS country_2,
+          ROUND(100 - (
+            ABS(a.city_pop_quantile - b.city_pop_quantile) + 
+            ABS(a.latitude_quantile - b.latitude_quantile) +
+            ABS(a.longitude_quantile - b.longitude_quantile) +
+            ABS(a.country_pop_quantile - b.country_pop_quantile) +
+            ABS(a.terrorism_quantile - b.terrorism_quantile) +
+            ABS(a.terrorism_deaths_quantile - b.terrorism_deaths_quantile) +
+            ABS(a.terrorism_injured_quantile - b.terrorism_injured_quantile)
+          ) / 7.0, 2) AS similarity_score
+        FROM (
+          SELECT * FROM city_quantiles x
+          WHERE x.city = $1 AND x.country = $2
+        ) a, city_quantiles b
+        WHERE (a.city <> b.city OR a.country <> b.country)
+        ORDER BY similarity_score DESC, a.population + b.population DESC
+        `,
+        [city_name, country_name],
+        (err, data) => {
+          if (err) {
+            console.error("Database query failed:", err);
+            res.status(500).json({ error: "Internal Server Error", details: err.message });
+          } else {
+            console.log("Query Results:", data.rows);
+            res.json(data.rows);
+          }
+        }
+      );
     } else {
-       connection.query(`
-              WITH city_clean AS (
-                  SELECT DISTINCT ON (city, country) * FROM cities
-                  ORDER BY city, country, city_population DESC
-              ), attacks_by_city AS (
-                              SELECT city, COUNT(*) AS num_attacks, SUM(nkill) AS num_deaths, SUM(nwound) AS num_injured
-                              FROM global_terrorism
-                              GROUP BY city
-                            ),
-                            city_quantiles AS (
-                              SELECT
-                                  a.city, a.country, a.city_population AS population,
-                                  NTILE(100) OVER (ORDER BY a.city_population) AS city_pop_quantile,
-                                  NTILE(100) OVER (ORDER BY a.city_latitude) AS latitude_quantile,
-                                  NTILE(100) OVER (ORDER BY a.city_longitude) AS longitude_quantile,
-                                  NTILE(100) OVER (ORDER BY b.population) AS country_pop_quantile,
-                                  NTILE(100) OVER (ORDER BY c.num_attacks) AS terrorism_quantile,
-                                  NTILE(100) OVER (ORDER BY c.num_deaths) AS terrorism_deaths_quantile,
-                                  NTILE(100) OVER (ORDER BY c.num_injured) AS terrorism_injured_quantile
-                              FROM city_clean a JOIN country b
-                              ON (a.country = b.country_name)
-                              JOIN attacks_by_city c
-                              ON (a.city = c.city)
-                              WHERE c.num_attacks > 0
-                              AND a.city_population >= 1000000
-                            )
-                            SELECT a.city as city_1, a.country as country_1, b.city as city_2, b.country as country_2,
-                                 ROUND(100 - (ABS(a.city_pop_quantile - b.city_pop_quantile) + ABS(a.latitude_quantile - b.latitude_quantile) +
-                                  ABS(a.longitude_quantile - b.longitude_quantile) +  ABS(a.country_pop_quantile - b.country_pop_quantile) +
-                                  ABS(a.terrorism_quantile - b.terrorism_quantile) + ABS(a.terrorism_deaths_quantile - b.terrorism_deaths_quantile) +
-                                        ABS(a.terrorism_injured_quantile - b.terrorism_injured_quantile)) / 7.0, 2) AS similarity_score
-                            FROM city_quantiles a, city_quantiles b
-                            WHERE (a.city <> b.city OR a.country <> b.country)
-                            AND a.city < b.city
-                            ORDER BY similarity_score DESC, a.population + b.population DESC
-            `, (err, data) => {
-              if (err) {
-                console.log(err);
-                res.json({});
-              } else {
-                res.json(data.rows);
-              }
-            });
+      res.status(400).json({ error: "Missing required parameters: city_name and country_name" });
     }
+  } catch (error) {
+    console.error("Unexpected error in /similar_cities route:", error);
+    res.status(500).json({ error: "Unexpected Server Error" });
+  }
 }
+
 
 // Route 2: GET /compare_cities
 const compare_cities = async function(req, res) {
@@ -224,7 +203,7 @@ const compare_cities = async function(req, res) {
   });
 }
 
-// Route 3: GET /country
+// Route 3:  GET /country/:country_name
    const country = async function (req, res) {
     const country_name = req.query.country_name ?? '';
     
@@ -235,7 +214,7 @@ const compare_cities = async function(req, res) {
              CASE WHEN birth_rate IS NULL THEN -1 ELSE birth_rate END AS birth_rate,
              CASE WHEN co2_emissions IS NULL THEN -1 ELSE co2_emissions END AS co2_emissions,
              CASE WHEN fertility_rate IS NULL THEN -1 ELSE fertility_rate END AS fertility_rate,
-             CASE WHEN forested_area IS NULL THEN -1 ELSE forested_area END AS forested_area,
+             CAS E WHEN forested_area IS NULL THEN -1 ELSE forested_area END AS forested_area,
              CASE WHEN gasoline_price IS NULL THEN -1 ELSE gasoline_price END AS gasoline_price,
              CASE WHEN gdp IS NULL THEN -1 ELSE gdp END AS gdp,
              CASE WHEN infant_mortality IS NULL THEN -1 ELSE infant_mortality END AS infant_mortality,
@@ -251,7 +230,7 @@ const compare_cities = async function(req, res) {
              CASE WHEN democracy_index IS NULL THEN -1 ELSE democracy_index END AS democracy_index,
              CASE WHEN education_index IS NULL THEN -1 ELSE education_index END AS education_index
       FROM country
-      WHERE country_name = '${country_name}'
+      WHERE country = '${country_name}'
       `, (err, data) => {
        if (err) {
         console.log(err);
@@ -297,44 +276,32 @@ const search_countries = async function(req, res) {
   }
 }
 
-// Route 5: GET /city
+// Route 5: GET /city/:city_name
 const city = async function (req, res) {
   const city_name = req.query.city_name ?? '';
   
   connection.query(`
-    WITH city_clean AS (
-    SELECT DISTINCT ON (city, country) *
-    FROM cities
-    ORDER BY city, country, city_population DESC
-    ),
-    crime_clean AS (
-    SELECT DISTINCT ON (country, city) * FROM city_crime_index
-    ORDER BY country, city, crime_index DESC, safety_index DESC
-    ),
-    cost_clean AS (
-    SELECT DISTINCT ON (city, country) * FROM cost_of_living
-    ORDER BY city, country, cost_of_living_index DESC
-    )
-    SELECT DISTINCT cities.country, cities.city, city_population,
+    SELECT cities.country, cities.city, city_population,
        CASE WHEN cost_of_living_index IS NULL THEN -1 ELSE cost_of_living_index END AS cost_of_living_index,
        CASE WHEN rent_index IS NULL THEN -1 ELSE rent_index END AS rent_index,
        CASE WHEN groceries_index IS NULL THEN -1 ELSE groceries_index END AS groceries_index,
        CASE WHEN restaurant_price_index IS NULL THEN -1 ELSE restaurant_price_index END AS restaurant_price_index,
        CASE WHEN ci.crime_index IS NULL THEN -1 ELSE ci.crime_index END AS crime_index,
        CASE WHEN ci.safety_index IS NULL THEN -1 ELSE ci.safety_index END AS safety_index
-    FROM city_clean cities
-    LEFT JOIN crime_clean ci ON ci.city = cities.city AND ci.country = cities.country
-    LEFT JOIN cost_clean cost_of_living ON cost_of_living.city = cities.city
-    WHERE cities.city = '${city_name}' AND cities.country != 'United States';
+    FROM cities
+    INNER JOIN city_crime_index ci ON ci.city = cities.city
+    INNER JOIN cost_of_living ON cost_of_living.city = cities.city
+    WHERE city = '${city_name}' AND country != 'United States'
     `, (err, data) => {
      if (err) {
       console.log(err);
-      res.json([]);
+      res.json({});
     } else {
-      res.json(data.rows);
+      res.json(data.rows[0]);
     }
   });
 }
+   
 
 // Route 6: GET /search_cities
 const search_cities = async function(req, res) {
@@ -371,60 +338,39 @@ const search_cities = async function(req, res) {
   }
 }
 
-// Route 7: GET /city_us
+// Route 7: GET /city_us/:city_name
 const city_us = async function (req, res) {
   const city_name = req.query.city_name ?? '';
   
   connection.query(`
     WITH numSchools AS (
-    SELECT LOWER(city) AS city, 'United States' AS country, COUNT(*) AS num_schools
+    SELECT city, COUNT(*) AS num_schools
     FROM schools
-    GROUP BY LOWER(city), country
-    ),
-    us_crime_clean AS (
-    SELECT LOWER(city) AS city,
-           MAX(total_crime) AS total_crime,
-           MAX(violent_crime) AS violent_crime
-    FROM us_crime
-    GROUP BY LOWER(city)
-    ),
-    cost_clean AS (
-    SELECT LOWER(city) AS city, country,
-           MAX(cost_of_living_index) AS cost_of_living_index,
-           MAX(rent_index) AS rent_index,
-           MAX(groceries_index) AS groceries_index,
-           MAX(restaurant_price_index) AS restaurant_price_index
-    FROM cost_of_living
-    WHERE country LIKE '%United States%'
-    GROUP BY LOWER(city), country
-    ),
-    zillow_clean AS (
-    SELECT LOWER(city) AS city,
-           MAX(homeprice) AS homeprice
-    FROM zillow_home_prices
-    GROUP BY LOWER(city)
-    ),
-    cdc_clean AS (
-    SELECT LOWER(location) AS city,
-           MAX(percent) AS percent
-    FROM cdc_local_health_data
-    GROUP BY LOWER(location)
+    GROUP BY city
     )
-    SELECT  n.city, n.country, n.num_schools,
-    CASE WHEN cost_of_living_index IS NULL THEN -1 ELSE cost_of_living_index END AS cost_of_living_index,
-    CASE WHEN rent_index IS NULL THEN -1 ELSE rent_index END AS rent_index,
-    CASE WHEN groceries_index IS NULL THEN -1 ELSE groceries_index END AS groceries_index,
-    CASE WHEN restaurant_price_index IS NULL THEN -1 ELSE restaurant_price_index END AS restaurant_price_index,
-    CASE WHEN violent_crime IS NULL THEN -1 ELSE violent_crime END AS violent_crime,
-    CASE WHEN total_crime IS NULL THEN -1 ELSE total_crime END AS total_crime,
-    CASE WHEN homeprice IS NULL THEN -1 ELSE homeprice END AS homeprice,
-    CASE WHEN c.percent IS NULL THEN -1 ELSE c.percent END AS percent
-    FROM numSchools n
-    LEFT JOIN us_crime_clean u ON u.city = n.city
-    LEFT JOIN zillow_clean z ON z.city = n.city
-    LEFT JOIN cdc_clean c ON c.city = n.city
-    LEFT JOIN cost_clean cc ON cc.city = n.city
-    WHERE n.city = '${city_name}' AND n.country = 'United States'
+    SELECT
+      cities.country,
+      cities.city,
+      city_population,
+      CASE WHEN cost_of_living_index IS NULL THEN -1 ELSE cost_of_living_index END AS cost_of_living_index,
+      CASE WHEN rent_index IS NULL THEN -1 ELSE rent_index END AS rent_index,
+      CASE WHEN groceries_index IS NULL THEN -1 ELSE groceries_index END AS groceries_index,
+      CASE WHEN restaurant_price_index IS NULL THEN -1 ELSE restaurant_price_index END AS restaurant_price_index,
+      CASE WHEN ci.crime_index IS NULL THEN -1 ELSE ci.crime_index END AS crime_index,
+      CASE WHEN ci.safety_index IS NULL THEN -1 ELSE ci.safety_index END AS safety_index,
+      CASE WHEN violent_crime IS NULL THEN -1 ELSE violent_crime END AS violent_crime,
+      CASE WHEN total_crime IS NULL THEN -1 ELSE total_crime END AS total_crime,
+      CASE WHEN homeprice IS NULL THEN -1 ELSE homeprice END AS homeprice,
+      CASE WHEN n.num_schools IS NULL THEN -1 ELSE n.num_schools END AS num_schools,
+      CASE WHEN cdc.percent IS NULL THEN -1 ELSE cdc.percent END AS percent
+    FROM cities
+    INNER JOIN city_crime_index ci ON ci.city = cities.city
+    INNER JOIN cost_of_living ON cost_of_living.city = cities.city
+    INNER JOIN zillow_home_prices z ON z.city = cities.city
+    INNER JOIN us_crime u ON u.city = cities.city
+    INNER JOIN numSchools n ON n.city = cities.city
+    INNER JOIN cdc_local_health_data cdc ON cdc.location = cities.city;
+    WHERE city = '${city_name}' AND country = 'United States'
     `, (err, data) => {
      if (err) {
       console.log(err);
@@ -434,6 +380,7 @@ const city_us = async function (req, res) {
     }
   });
 }
+
 
 // Route 8: GET /preference_search
 const preference_search = async function (req, res) {
@@ -448,22 +395,6 @@ const preference_search = async function (req, res) {
   const minSafetyIndex = req.query.min_safety_index ?? 0;
   const maxCostOfLivingIndex = req.query.max_cost_of_living_index ?? 9999;
   const maxTerrorismDeaths = req.query.max_terrorism_deaths ?? 9999;
-  const country = req.query.country;
-  const includeMissingData = req.query.include_missing_data === 'true';
-
-  const page = req.query.page;
-  const pageSize = req.query.page_size ?? 10;
-
-  const countryFilter = country ? `AND st.country = '${country}'` : '';
-
-  const missingDataCondition = includeMissingData
-    ? '' 
-    : `
-      AND cd.crime_index IS NOT NULL 
-      AND cd.safety_index IS NOT NULL 
-      AND cld.cost_of_living_index IS NOT NULL 
-      AND td.total_deaths_from_terrorism IS NOT NULL 
-    `;
 
   if (!page) {
     connection.query(`
@@ -530,12 +461,7 @@ const preference_search = async function (req, res) {
           summer_temp st
       JOIN 
           winter_temp wt 
-          ON st.city = wt.city 
-            AND st.country = wt.country 
-            AND (
-              (st.state = wt.state)
-              OR (st.state IS NULL AND wt.state IS NULL)
-            )
+          ON st.city = wt.city AND st.country = wt.country AND st.state = wt.state
       JOIN 
           population_data pd 
           ON st.city = pd.city AND st.country = pd.country
@@ -557,9 +483,8 @@ const preference_search = async function (req, res) {
           AND (cd.safety_index IS NULL OR cd.safety_index >= ${minSafetyIndex})
           AND (cld.cost_of_living_index IS NULL OR cld.cost_of_living_index <= ${maxCostOfLivingIndex})
           AND (td.total_deaths_from_terrorism IS NULL OR td.total_deaths_from_terrorism <= ${maxTerrorismDeaths})
-          ${countryFilter}
-          ${missingDataCondition}
       ORDER BY 
+          st.avg_summer_temp DESC, 
           pd.city_population DESC;
     `, (err, data) => {
       if (err) {
@@ -637,12 +562,7 @@ const preference_search = async function (req, res) {
           summer_temp st
       JOIN 
           winter_temp wt 
-          ON st.city = wt.city 
-            AND st.country = wt.country 
-            AND (
-              (st.state = wt.state)
-              OR (st.state IS NULL AND wt.state IS NULL)
-            )
+          ON st.city = wt.city AND st.country = wt.country AND st.state = wt.state
       JOIN 
           population_data pd 
           ON st.city = pd.city AND st.country = pd.country
@@ -664,9 +584,8 @@ const preference_search = async function (req, res) {
           AND (cd.safety_index IS NULL OR cd.safety_index >= ${minSafetyIndex})
           AND (cld.cost_of_living_index IS NULL OR cld.cost_of_living_index <= ${maxCostOfLivingIndex})
           AND (td.total_deaths_from_terrorism IS NULL OR td.total_deaths_from_terrorism <= ${maxTerrorismDeaths})
-          ${countryFilter}
-          ${missingDataCondition}
       ORDER BY 
+          st.avg_summer_temp DESC, 
           pd.city_population DESC 
       LIMIT ${pageSize} OFFSET ${offset};
     `, (err, data) => {
@@ -706,7 +625,7 @@ const largest_cities = async function (req, res) {
 const cheapest_cities = async function(req, res) {
   // Returns the top quartile of cheapest cities in order of cost of living, with the cost of living interpolated/estimated for cities without data. Optionally paginated.
   const page = req.query.page;
-  const pageSize = req.query.page_size ?? 10; 
+  const pageSize = req.query.page_size ?? 10;
 
   if (!page) {
     connection.query(`
