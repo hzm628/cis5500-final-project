@@ -10,6 +10,7 @@ import {
   TextField,
 } from "@mui/material";
 import { styled } from "@mui/system";
+import config from "../config.json"; // Import configuration
 
 const CityCard = styled(Paper)({
   borderRadius: "15px",
@@ -36,22 +37,22 @@ const SimilaritiesPage = () => {
       setError(null);
       setSimilarCities([]);
 
-      const response = await fetch(`/api/similar_cities?city_name=${encodeURIComponent(cityName)}&country_name=${encodeURIComponent(countryName)}`);
+      // Fetch data from API using the full URL from config
+      const response = await fetch(`http://${config.server_host}:${config.server_port}/similar_cities?city_name=${encodeURIComponent(cityName)}&country_name=${encodeURIComponent(countryName)}`);
+
+      const rawResponse = await response.text();
+      console.log("Raw Response:", rawResponse); // Debugging log
 
       if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Server error: ${response.status} - ${errorText}`);
+        const errorData = JSON.parse(rawResponse);
+        throw new Error(errorData.error || "Unexpected server error");
       }
 
-      const data = await response.json();
+      const data = JSON.parse(rawResponse);
       setSimilarCities(data);
     } catch (err) {
       console.error("Error fetching similar cities:", err);
-      if (err.message.includes("Unexpected token")) {
-        setError("The server returned an invalid response. Please try again later.");
-      } else {
-        setError(err.message || "An unknown error occurred.");
-      }
+      setError(err.message || "An unknown error occurred.");
     } finally {
       setIsLoading(false);
     }
@@ -102,7 +103,7 @@ const SimilaritiesPage = () => {
                 {city.city_2}, {city.country_2}
               </Typography>
               <Typography variant="body2" color="textSecondary">
-                Similarity Score: {city.similarity_score}%
+                Similarity Score: {city.similarity_score} %
               </Typography>
             </CityCard>
           </Grid>
