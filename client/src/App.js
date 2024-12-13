@@ -7,6 +7,7 @@ import NavBar from './components/NavBar';
 import HomePage from './pages/HomePage';
 import CountriesPage from './pages/CountriesPage';
 import SearchCitiesPage from './pages/SearchCitiesPage';
+import ComparisonsPage from './pages/ComparisonsPage';
 
 export const theme = createTheme({
   palette: {
@@ -25,6 +26,7 @@ export default function App() {
           <Route path="/" element={<HomePage />} />
           <Route path="/countries" element={<CountriesPage />} />
           <Route path="/search_cities" element={<SearchCitiesPage />} />
+          <Route path="/comparisons" element={<ComparisonsPage />} />
         </Routes>
       </BrowserRouter>
     </ThemeProvider>
