@@ -31,7 +31,7 @@ export default function SearchCitiesPage() {
   const [safetyIndex, setSafetyIndex] = useState([0, 100]);
   const [costOfLivingIndex, setCostOfLivingIndex] = useState([0, 100]);
   const [terrorismDeaths, setTerrorismDeaths] = useState([0, 9999]);
-  const [includeCitiesWithNoData, setIncludeCitiesWithNoData] = useState(true);
+  const [includeCitiesWithNoData, setIncludeCitiesWithNoData] = useState(true);  
 
   const fetchCities = () => { 
     setLoading(true);
@@ -122,9 +122,9 @@ export default function SearchCitiesPage() {
             value={minSummerTemp}
             onChange={(e, newValue) => setMinSummerTemp(newValue)}
             valueLabelDisplay="auto"
-            min={-100}
-            max={100}
-          />
+            min={-40}
+            max={120}
+          /> 
         </Grid>
         <Grid item xs={12} sm={6}>
           <Typography gutterBottom>Average Winter Temperature (°F)</Typography>
@@ -132,8 +132,8 @@ export default function SearchCitiesPage() {
             value={minWinterTemp} 
             onChange={(e, newValue) => setMinWinterTemp(newValue)}
             valueLabelDisplay="auto"
-            min={-100}
-            max={100}
+            min={-40}
+            max={120}
           />
         </Grid>
 
