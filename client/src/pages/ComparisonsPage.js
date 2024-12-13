@@ -70,9 +70,9 @@ const ComparisonsPage = () => {
   const allCategories = ["population", "cost_of_living", "terrorism_attacks", "crime_index", "average_temperature"];
   const maxValues = [25000000, 100, 50, 300, 100]; // Example max values for normalization
 
-  const radarData = comparisonData
+  const radarData = comparisonData 
     ? {
-        labels: allCategories, // Use explicit category labels
+        labels: allCategories, // Use explicit category labels 
         datasets: [
           {
             label: `${city1}, ${country1}`,
@@ -83,7 +83,7 @@ const ComparisonsPage = () => {
                   ? item[`${city1.toLowerCase().replace(/ /g, "_")}_${country1.toLowerCase().replace(/ /g, "_")}`] || 0
                   : 0;
               }),
-              maxValues
+              maxValues 
             ),
             backgroundColor: "rgba(54, 162, 235, 0.2)",
             borderColor: "rgba(54, 162, 235, 1)",

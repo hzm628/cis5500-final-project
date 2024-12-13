@@ -20,9 +20,9 @@ connection.connect((err) => err && console.log(err));
 
 /******************
  * ROUTES *
- ******************/
+ ******************/ 
 
-// Route 1: GET /similar_cities
+// Route 1: GET /similar_cities 
 const similar_cities = async function (req, res) {
   try {
     const city_name = req.query.city_name ?? '';
@@ -207,14 +207,14 @@ const compare_cities = async function(req, res) {
    const country = async function (req, res) {
     const country_name = req.query.country_name ?? '';
     
-    connection.query(`
-      SELECT country_name,
+    connection.query(`  
+      SELECT country_name, 
              CASE WHEN agricultural_land IS NULL THEN -1 ELSE agricultural_land END AS agricultural_land,
              CASE WHEN land_area IS NULL THEN - 1 ELSE land_area END AS land_area,
              CASE WHEN birth_rate IS NULL THEN -1 ELSE birth_rate END AS birth_rate,
              CASE WHEN co2_emissions IS NULL THEN -1 ELSE co2_emissions END AS co2_emissions,
              CASE WHEN fertility_rate IS NULL THEN -1 ELSE fertility_rate END AS fertility_rate,
-             CAS E WHEN forested_area IS NULL THEN -1 ELSE forested_area END AS forested_area,
+             CASE WHEN forested_area IS NULL THEN -1 ELSE forested_area END AS forested_area,
              CASE WHEN gasoline_price IS NULL THEN -1 ELSE gasoline_price END AS gasoline_price,
              CASE WHEN gdp IS NULL THEN -1 ELSE gdp END AS gdp,
              CASE WHEN infant_mortality IS NULL THEN -1 ELSE infant_mortality END AS infant_mortality,
@@ -230,7 +230,7 @@ const compare_cities = async function(req, res) {
              CASE WHEN democracy_index IS NULL THEN -1 ELSE democracy_index END AS democracy_index,
              CASE WHEN education_index IS NULL THEN -1 ELSE education_index END AS education_index
       FROM country
-      WHERE country = '${country_name}'
+      WHERE country = '${country_name}' 
       `, (err, data) => {
        if (err) {
         console.log(err);
@@ -396,7 +396,21 @@ const preference_search = async function (req, res) {
   const maxCostOfLivingIndex = req.query.max_cost_of_living_index ?? 9999;
   const maxTerrorismDeaths = req.query.max_terrorism_deaths ?? 9999;
 
-  const page = req.query.page;  
+  const country = req.query.country;
+  const includeMissingData = req.query.include_missing_data === 'true';
+
+  const page = req.query.page;
+  const pageSize = req.query.page_size ?? 10;
+
+  const countryFilter = country ? `AND st.country = '${country}'` : '';
+  const missingDataCondition = includeMissingData
+    ? '' 
+    : `
+      AND cd.crime_index IS NOT NULL 
+      AND cd.safety_index IS NOT NULL 
+      AND cld.cost_of_living_index IS NOT NULL 
+      AND td.total_deaths_from_terrorism IS NOT NULL 
+    `;
 
   if (!page) { 
     connection.query(`
@@ -484,6 +498,8 @@ const preference_search = async function (req, res) {
           AND (cd.safety_index IS NULL OR cd.safety_index >= ${minSafetyIndex})
           AND (cld.cost_of_living_index IS NULL OR cld.cost_of_living_index <= ${maxCostOfLivingIndex})
           AND (td.total_deaths_from_terrorism IS NULL OR td.total_deaths_from_terrorism <= ${maxTerrorismDeaths})
+          ${countryFilter}
+          ${missingDataCondition} 
       ORDER BY 
           st.avg_summer_temp DESC, 
           pd.city_population DESC;
@@ -584,6 +600,8 @@ const preference_search = async function (req, res) {
           AND (cd.safety_index IS NULL OR cd.safety_index >= ${minSafetyIndex})
           AND (cld.cost_of_living_index IS NULL OR cld.cost_of_living_index <= ${maxCostOfLivingIndex})
           AND (td.total_deaths_from_terrorism IS NULL OR td.total_deaths_from_terrorism <= ${maxTerrorismDeaths})
+          ${countryFilter}
+          ${missingDataCondition}
       ORDER BY 
           st.avg_summer_temp DESC, 
           pd.city_population DESC 
