@@ -396,7 +396,9 @@ const preference_search = async function (req, res) {
   const maxCostOfLivingIndex = req.query.max_cost_of_living_index ?? 9999;
   const maxTerrorismDeaths = req.query.max_terrorism_deaths ?? 9999;
 
-  if (!page) {
+  const page = req.query.page;  
+
+  if (!page) { 
     connection.query(`
       WITH summer_temp AS (
           SELECT 

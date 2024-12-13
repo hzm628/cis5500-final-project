@@ -39,9 +39,9 @@ const ComparisonsPage = () => {
   const [country2, setCountry2] = useState("");
   const [comparisonData, setComparisonData] = useState(null);
   const [error, setError] = useState(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false); 
 
-  const handleCompare = async () => {
+  const handleCompare = async () => { 
     try {
       setError(null);
       setIsLoading(true);
