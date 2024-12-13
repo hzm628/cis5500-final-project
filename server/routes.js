@@ -291,7 +291,7 @@ const city = async function (req, res) {
     FROM cities
     INNER JOIN city_crime_index ci ON ci.city = cities.city
     INNER JOIN cost_of_living ON cost_of_living.city = cities.city
-    WHERE city = '${city_name}' AND country != 'United States'
+    WHERE LOWER(cities.city) = LOWER('${city_name}') AND cities.country != 'United States'
     `, (err, data) => {
      if (err) {
       console.log(err);
@@ -301,7 +301,6 @@ const city = async function (req, res) {
     }
   });
 }
-   
 
 // Route 6: GET /search_cities
 const search_cities = async function(req, res) {
@@ -347,11 +346,11 @@ const city_us = async function (req, res) {
     SELECT city, COUNT(*) AS num_schools
     FROM schools
     GROUP BY city
-    )
+    )  
     SELECT
-      cities.country,
+      cities.country, 
       cities.city,
-      city_population,
+      city_population, 
       CASE WHEN cost_of_living_index IS NULL THEN -1 ELSE cost_of_living_index END AS cost_of_living_index,
       CASE WHEN rent_index IS NULL THEN -1 ELSE rent_index END AS rent_index,
       CASE WHEN groceries_index IS NULL THEN -1 ELSE groceries_index END AS groceries_index,
@@ -362,7 +361,7 @@ const city_us = async function (req, res) {
       CASE WHEN total_crime IS NULL THEN -1 ELSE total_crime END AS total_crime,
       CASE WHEN homeprice IS NULL THEN -1 ELSE homeprice END AS homeprice,
       CASE WHEN n.num_schools IS NULL THEN -1 ELSE n.num_schools END AS num_schools,
-      CASE WHEN cdc.percent IS NULL THEN -1 ELSE cdc.percent END AS percent
+      CASE WHEN cdc.percent IS NULL THEN -1 ELSE cdc.percent END AS percent 
     FROM cities
     INNER JOIN city_crime_index ci ON ci.city = cities.city
     INNER JOIN cost_of_living ON cost_of_living.city = cities.city
