@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Card, CardContent, Typography, Box, Button } from '@mui/material';
 import { styled } from '@mui/system';
+import { useNavigate } from 'react-router-dom';
 
 import CityDetailsDialog from './CityDetailsDialog';
 
@@ -25,6 +26,26 @@ export default function CityCard({ city }) {
   const handleDialogClose = () => {
     setDialogOpen(false);
   };
+  
+  const navigate = useNavigate();
+
+  const handleCompare = () => {
+    navigate('/comparisons', {
+      state: {
+        city1: city.city,
+        country1: city.country,
+      },
+    });
+  };
+
+  const handleFindSimilar = () => {
+    navigate('/similarities', {
+      state: {
+        cityName: city.city,
+        countryName: city.country,
+      },
+    });
+  });
 
   return (
     <>
@@ -42,14 +63,14 @@ export default function CityCard({ city }) {
         <Typography variant="body2" sx={{ mb: 2 }}>
           <strong>Average Summer Temperature (°F):</strong>{' '}
           {city.avg_summer_temp !== undefined && city.avg_summer_temp !== null
-            ? Number(city.avg_summer_temp).toFixed(2) 
+            ? Number(city.avg_summer_temp).toFixed(2)
             : 'N/A'}
         </Typography>
         <Typography variant="body2" sx={{ mb: 2 }}>
           <strong>Average Winter Temperature (°F):</strong>{' '}
           {city.avg_winter_temp !== undefined && city.avg_winter_temp !== null
             ? Number(city.avg_winter_temp).toFixed(2)
-            : 'N/A'} 
+            : 'N/A'}
         </Typography>
         <Typography variant="body2" sx={{ mb: 2 }}>
           <strong>Crime Index:</strong>{' '}
@@ -87,14 +108,14 @@ export default function CityCard({ city }) {
         <Button
           variant="contained"
           color="primary"
-          /* TODO: handle onClick!!!!!!!! */
+          onClick={handleCompare} // Navigate to Comparisons Page
         >
           Compare 
         </Button>
         <Button
           variant="contained"
           color="secondary"
-          /* TODO: handle onClick!!!!!!!! */
+          onClick={handleFindSimilar} // Navigate to Similarities Page
         >
           Find Similar Cities
         </Button>
@@ -109,4 +130,4 @@ export default function CityCard({ city }) {
     />
   </>
   );
-} 
+}

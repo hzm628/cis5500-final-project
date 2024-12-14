@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Radar } from "react-chartjs-2";
 import "chart.js/auto"; // Ensures Chart.js is properly imported
 import {
@@ -10,9 +10,16 @@ import {
   Button,
   CircularProgress,
   Paper,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
 } from "@mui/material";
 import { styled } from "@mui/system";
 import config from "../config.json"; // Import configuration
+import { useLocation } from "react-router-dom";
 
 const RadarCard = styled(Paper)({
   borderRadius: "15px",
@@ -20,7 +27,7 @@ const RadarCard = styled(Paper)({
   textAlign: "center",
   boxShadow: "0 4px 10px rgba(0, 0, 0, 0.2)",
   transition: "transform 0.3s ease, box-shadow 0.3s ease",
-  '&:hover': {
+  "&:hover": {
     transform: "scale(1.05)",
     boxShadow: "0 8px 20px rgba(0, 0, 0, 0.3)",
   },
@@ -32,18 +39,39 @@ const normalizeData = (data, maxValues) => {
   });
 };
 
+// Fixed benchmark max values for normalization
+const fixedMaxValues = [
+  25000000, // population
+  100,      // cost_of_living
+  50,       // terrorism_attacks
+  300,      // crime_index
+  120,      // average_temperature
+];
+
 const ComparisonsPage = () => {
-  const [city1, setCity1] = useState("");
-  const [country1, setCountry1] = useState("");
+  const location = useLocation(); // Access location state for pre-filled data
+  const prefilledCity1 = location.state?.city1 || "";
+  const prefilledCountry1 = location.state?.country1 || "";
+
+  const [city1, setCity1] = useState(prefilledCity1);
+  const [country1, setCountry1] = useState(prefilledCountry1);
   const [city2, setCity2] = useState("");
   const [country2, setCountry2] = useState("");
   const [comparisonData, setComparisonData] = useState(null);
   const [error, setError] = useState(null);
-  const [isLoading, setIsLoading] = useState(false); 
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleCompare = async () => { 
+  useEffect(() => {
+    // Automatically trigger comparison if prefilled data is present
+    if (prefilledCity1 && prefilledCountry1) {
+      handleCompare();
+    }
+  }, [prefilledCity1, prefilledCountry1]);
+
+  const handleCompare = async () => {
     try {
       setError(null);
+      setComparisonData(null);
       setIsLoading(true);
 
       // Fetch data from API using the full URL from config
@@ -52,27 +80,30 @@ const ComparisonsPage = () => {
       const response = await fetch(query);
 
       if (!response.ok) {
-        throw new Error("Failed to fetch comparison data. Please try again.");
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to fetch comparison data. Please try again.");
       }
 
       const data = await response.json();
+      if (data.length === 0) {
+        throw new Error("One or both cities do not exist. Please fix spelling and try again.");
+      }
+
       console.log("Response data:", data); // Debugging
       setComparisonData(data);
     } catch (err) {
       console.error("Error fetching comparison data:", err.message);
       setError(err.message);
-      setComparisonData(null);
     } finally {
       setIsLoading(false);
     }
   };
 
   const allCategories = ["population", "cost_of_living", "terrorism_attacks", "crime_index", "average_temperature"];
-  const maxValues = [25000000, 100, 50, 300, 100]; // Example max values for normalization
 
-  const radarData = comparisonData 
+  const radarData = comparisonData
     ? {
-        labels: allCategories, // Use explicit category labels 
+        labels: allCategories, // Use explicit category labels
         datasets: [
           {
             label: `${city1}, ${country1}`,
@@ -83,7 +114,7 @@ const ComparisonsPage = () => {
                   ? item[`${city1.toLowerCase().replace(/ /g, "_")}_${country1.toLowerCase().replace(/ /g, "_")}`] || 0
                   : 0;
               }),
-              maxValues 
+              fixedMaxValues
             ),
             backgroundColor: "rgba(54, 162, 235, 0.2)",
             borderColor: "rgba(54, 162, 235, 1)",
@@ -98,7 +129,7 @@ const ComparisonsPage = () => {
                   ? item[`${city2.toLowerCase().replace(/ /g, "_")}_${country2.toLowerCase().replace(/ /g, "_")}`] || 0
                   : 0;
               }),
-              maxValues
+              fixedMaxValues
             ),
             backgroundColor: "rgba(255, 99, 132, 0.2)",
             borderColor: "rgba(255, 99, 132, 1)",
@@ -168,31 +199,44 @@ const ComparisonsPage = () => {
         </Typography>
       )}
 
-      {comparisonData && (
+      {comparisonData && !error && (
         <Grid container spacing={4} justifyContent="center">
           <Grid item xs={12} md={6}>
             <RadarCard>
               <Typography variant="h6" gutterBottom>
                 Comparison Results
               </Typography>
-              <ul style={{ textAlign: "left" }}>
-                {allCategories.map((category, index) => {
-                  const item = comparisonData.find((data) => data.category === category);
-                  return (
-                    <li key={index}>
-                      {`${category}: ${
-                        item
-                          ? item[`${city1.toLowerCase().replace(/ /g, "_")}_${country1.toLowerCase().replace(/ /g, "_")}`] ?? "No Data"
-                          : "No Data"
-                      } vs ${
-                        item
-                          ? item[`${city2.toLowerCase().replace(/ /g, "_")}_${country2.toLowerCase().replace(/ /g, "_")}`] ?? "No Data"
-                          : "No Data"
-                      }`}
-                    </li>
-                  );
-                })}
-              </ul>
+              <TableContainer>
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell></TableCell> {/* Blank cell */}
+                      <TableCell>{city1}, {country1}</TableCell>
+                      <TableCell>{city2}, {country2}</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {allCategories.map((category, index) => {
+                      const item = comparisonData.find((data) => data.category === category);
+                      return (
+                        <TableRow key={index}>
+                          <TableCell>{category}</TableCell>
+                          <TableCell>
+                            {item
+                              ? item[`${city1.toLowerCase().replace(/ /g, "_")}_${country1.toLowerCase().replace(/ /g, "_")}`] ?? "No Data"
+                              : "No Data"}
+                          </TableCell>
+                          <TableCell>
+                            {item
+                              ? item[`${city2.toLowerCase().replace(/ /g, "_")}_${country2.toLowerCase().replace(/ /g, "_")}`] ?? "No Data"
+                              : "No Data"}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </TableContainer>
             </RadarCard>
           </Grid>
 

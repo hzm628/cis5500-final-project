@@ -34,11 +34,7 @@ const similar_cities = async function (req, res) {
     if (city_name && country_name) {
       connection.query(
         `
-        WITH city_clean AS (
-          SELECT DISTINCT ON (city, country) * FROM cities
-          ORDER BY city, country, city_population DESC
-        ),
-        attacks_by_city AS (
+        WITH attacks_by_city AS (
           SELECT city, COUNT(*) AS num_attacks, SUM(nkill) AS num_deaths, SUM(nwound) AS num_injured
           FROM global_terrorism
           GROUP BY city
@@ -53,11 +49,11 @@ const similar_cities = async function (req, res) {
             NTILE(100) OVER (ORDER BY c.num_attacks) AS terrorism_quantile,
             NTILE(100) OVER (ORDER BY c.num_deaths) AS terrorism_deaths_quantile,
             NTILE(100) OVER (ORDER BY c.num_injured) AS terrorism_injured_quantile
-          FROM city_clean a
+          FROM cities a
           JOIN country b ON (a.country = b.country_name)
           JOIN attacks_by_city c ON (a.city = c.city)
           WHERE c.num_attacks > 0
-            AND ((LOWER(a.city) = LOWER($1) AND LOWER(a.country) = LOWER($2)) OR (a.city_population > 100000))
+            AND ((LOWER(a.city) = LOWER($1) AND LOWER(a.country) = LOWER($2)) OR (a.city_population > 10000))
         )
         SELECT 
           a.city AS city_1, a.country AS country_1, 
@@ -100,7 +96,7 @@ const similar_cities = async function (req, res) {
 
 
 // Route 2: GET /compare_cities
-const compare_cities = async function(req, res) {
+const compare_cities = async function (req, res) {
   const city1 = req.query.city1 ?? 'Philadelphia';
   const country1 = req.query.country1 ?? 'United States';
   const city2 = req.query.city2 ?? 'Boston';
@@ -109,99 +105,103 @@ const compare_cities = async function(req, res) {
   const col1 = `${city1.replace(/ /g, "_")}_${country1.replace(/ /g, "_")}`;
   const col2 = `${city2.replace(/ /g, "_")}_${country2.replace(/ /g, "_")}`;
 
-  connection.query(`
-    WITH city_one AS (
-        SELECT * FROM cities
-        WHERE (LOWER(country) = LOWER('${country1}') AND LOWER(city) = LOWER('${city1}'))
-        ORDER BY city_population DESC
-        LIMIT 1
-    ),
-        city_two AS (
-        SELECT * FROM cities
-        WHERE (LOWER(country) = LOWER('${country2}') AND LOWER(city) = LOWER('${city2}'))
-        ORDER BY city_population DESC
-        LIMIT 1
-     ),
-        populations AS (SELECT 'population'      AS category,
-                               a.city_population AS ${col1},
-                               b.city_population AS ${col2}
-                        FROM city_one a,
-                             city_two b
-    ),
-        cost_of_living AS (SELECT 'cost_of_living'      AS category,
-                               a.cost_of_living_index AS ${col1},
-                               b.cost_of_living_index AS ${col2}
-                        FROM (
-                            SELECT * FROM city_one x
-                                LEFT JOIN cost_of_living l
-                                ON (x.city = l.city AND x.country = l.country)
-                             ) a,
-                            (
-                            SELECT * FROM city_two y
-                                LEFT JOIN cost_of_living l
-                                ON (y.city = l.city AND y.country = l.country)
-                             ) b
-    ),
-        terrorism_attacks AS (SELECT 'terrorism_attacks'      AS category,
-                               a.count AS ${col1},
-                               b.count AS ${col2}
-                        FROM (
-                            SELECT COUNT(*) FROM city_one x
-                                LEFT JOIN global_terrorism l
-                                ON (x.city = l.city AND x.country = l.country)
-                             ) a,
-                            (
-                            SELECT COUNT(*) FROM city_two y
-                                LEFT JOIN global_terrorism l
-                                ON (y.city = l.city AND y.country = l.country)
-                             ) b
-    ),
-        crime_index AS (SELECT 'crime_index'      AS category,
-                               a.crime_index AS ${col1},
-                               b.crime_index AS ${col2}
-                        FROM (
-                            SELECT * FROM city_one x
-                                LEFT JOIN city_crime_index l
-                                ON (x.city = l.city AND x.country = TRIM(l.country))
-                             ) a,
-                            (
-                            SELECT * FROM city_two y
-                                LEFT JOIN city_crime_index l
-                                ON (y.city = l.city AND y.country = TRIM(l.country))
-                             ) b
-    ),
-        avg_temperature AS (SELECT 'average_temperature'      AS category,
-                               a.avg AS ${col1},
-                               b.avg AS ${col2}
-                        FROM (
-                            SELECT ROUND(AVG(avg_temperature), 2) AS avg FROM city_one x
-                                LEFT JOIN city_temperature l
-                                ON (x.city = l.city AND x.country = l.country)
-                             ) a,
-                            (
-                            SELECT ROUND(AVG(avg_temperature), 2) AS avg FROM city_two y
-                                LEFT JOIN city_temperature l
-                                ON (y.city = l.city AND y.country = l.country)
-                             ) b
-    )
-    SELECT * FROM populations
-    UNION ALL
-    SELECT * FROM cost_of_living
-    UNION ALL
-    SELECT * FROM terrorism_attacks
-    UNION ALL
-    SELECT * FROM crime_index
-    UNION ALL
-    SELECT * FROM avg_temperature
-  `, (err, data) => {
-    if (err) {
-      console.log(err);
-      res.json({});
-    } else {
-      res.json(data.rows)
-    }
-  });
-}
+  if (city1 && country1 && city2 && country2) {
+    connection.query(
+      `
+      WITH city_one AS (
+          SELECT * FROM cities
+          WHERE (LOWER(country) = LOWER('${country1}') AND LOWER(city) = LOWER('${city1}'))
+          ORDER BY city_population DESC
+          LIMIT 1
+      ),
+      city_two AS (
+          SELECT * FROM cities
+          WHERE (LOWER(country) = LOWER('${country2}') AND LOWER(city) = LOWER('${city2}'))
+          ORDER BY city_population DESC
+          LIMIT 1
+      )
+      SELECT * FROM (SELECT 'population'      AS category,
+                                     a.city_population AS ${col1},
+                                     b.city_population AS ${col2}
+                              FROM city_one a,
+                                   city_two b
+          ) AS population
+          UNION ALL
+          SELECT * FROM (SELECT 'cost_of_living'      AS category,
+                                     a.cost_of_living_index AS ${col1},
+                                     b.cost_of_living_index AS ${col2}
+                              FROM (
+                                  SELECT * FROM city_one x
+                                      LEFT JOIN cost_of_living l
+                                      ON (x.city = l.city AND x.country = l.country)
+                                   ) a,
+                                  (
+                                  SELECT * FROM city_two y
+                                      LEFT JOIN cost_of_living l
+                                      ON (y.city = l.city AND y.country = l.country)
+                                   ) b) AS cost_of_living
+          UNION ALL
+          SELECT * FROM (SELECT 'terrorism_attacks'      AS category,
+                                     a.count AS ${col1},
+                                     b.count AS ${col2}
+                              FROM (
+                                  SELECT COUNT(*) FROM city_one x
+                                      LEFT JOIN global_terrorism l
+                                      ON (x.city = l.city AND x.country = l.country)
+                                   ) a,
+                                  (
+                                  SELECT COUNT(*) FROM city_two y
+                                      LEFT JOIN global_terrorism l
+                                      ON (y.city = l.city AND y.country = l.country)
+                                   ) b) AS terrorism
+          UNION ALL
+          SELECT * FROM (SELECT 'crime_index'      AS category,
+                                     a.crime_index AS ${col1},
+                                     b.crime_index AS ${col2}
+                              FROM (
+                                  SELECT * FROM city_one x
+                                      LEFT JOIN city_crime_index l
+                                      ON (x.city = l.city AND x.country = TRIM(l.country))
+                                   ) a,
+                                  (
+                                  SELECT * FROM city_two y
+                                      LEFT JOIN city_crime_index l
+                                      ON (y.city = l.city AND y.country = TRIM(l.country))
+                                   ) b
+          ) AS crime_index
+          UNION ALL
+          SELECT * FROM (SELECT 'average_temperature'      AS category,
+                                     a.avg AS ${col1},
+                                     b.avg AS ${col2}
+                              FROM (
+                                  SELECT ROUND(AVG(avg_temperature), 2) AS avg FROM city_one x
+                                      LEFT JOIN city_temperature l
+                                      ON (x.city = l.city AND x.country = l.country)
+                                   ) a,
+                                  (
+                                  SELECT ROUND(AVG(avg_temperature), 2) AS avg FROM city_two y
+                                      LEFT JOIN city_temperature l
+                                      ON (y.city = l.city AND y.country = l.country)
+                                   ) b) AS avg_temperature;
+      `,
+      (err, data) => {
+        if (err) {
+          console.log(err);
+          res.status(500).json({ error: "An error occurred while processing the request." });
+        } else if (!data.rows.length) {
+          res.status(404).json({
+            error: `One or both cities (${city1}, ${country1} or ${city2}, ${country2}) do not exist. Please check your input and try again.`,
+          });
+        } else {
+          res.json(data.rows);
+        }
+      }
+    );
+  } else {
+    res.status(400).json({ error: "City and country parameters are required for both cities." });
+  }
+};
+
 
 // Route 3:  GET /country/:country_name
    const country = async function (req, res) {
@@ -646,67 +646,71 @@ const cheapest_cities = async function(req, res) {
 
   if (!page) {
     connection.query(`
-      WITH country_avg AS (
-        SELECT
-            country,
-            AVG(cost_of_living_index) AS avg_cost_of_living_index
-        FROM
-            cost_of_living
-        GROUP BY
-            country
-        ORDER BY avg_cost_of_living_index DESC
+      WITH estimated_costs AS (
+          SELECT a.city_1 AS city, a.country_1 AS country,
+                 (c1.cost_of_living_index / distance_1^2 +
+                  c2.cost_of_living_index / distance_2^2 +
+                  c3.cost_of_living_index / distance_3^2) /
+                 (1 / distance_1^2 + 1 / distance_2^2 + 1 / distance_3^2) AS cost_of_living
+          FROM closest_cities a
+          JOIN cost_of_living c1
+          ON a.close_city_1 = c1.city
+          JOIN cost_of_living c2
+          ON a.close_city_2 = c2.city
+          JOIN cost_of_living c3
+          ON a.close_city_3 = c3.city
       ),
-      city_costs AS (
-        SELECT
-            C.country,
-            C.city,
-            COALESCE(
-                COL.cost_of_living_index,
-                CA.avg_cost_of_living_index,
-                (SELECT AVG(cost_of_living_index) FROM cost_of_living)
-            ) AS cost_of_living_index
-        FROM
-            cities C
-        LEFT JOIN
-            cost_of_living COL ON C.country = COL.country AND C.city = COL.city
-        LEFT JOIN
-            country_avg CA ON C.country = CA.country
-        ORDER BY cost_of_living_index DESC
-      ),
-      median_value AS (
-        SELECT
-            PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY cost_of_living_index) AS median_value
-        FROM
-            city_costs
-      ),
-      subset_below_median AS (
-        SELECT
-            CC.country,
-            CC.city,
-            CC.cost_of_living_index
-        FROM
-            city_costs CC
-            CROSS JOIN median_value MV
-        WHERE
-            CC.cost_of_living_index <= MV.median_value
-      ),
-      median_value_subset AS (
-        SELECT
-            PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY cost_of_living_index) AS median_value
-        FROM
-            subset_below_median
-      )
-      SELECT
-        SBM.country,
-        SBM.city,
-        SBM.cost_of_living_index
-      FROM
-        subset_below_median SBM
-        CROSS JOIN median_value_subset MVS
-      WHERE
-        SBM.cost_of_living_index <= MVS.median_value
-      ORDER BY
-        SBM.cost_of_living_index ASC;
+            city_costs AS (
+              SELECT
+                  C.country,
+                  C.city,
+                  COALESCE(
+                      COL.cost_of_living_index,
+                      EC.cost_of_living,
+                      (SELECT AVG(cost_of_living_index) FROM cost_of_living)
+                  ) AS cost_of_living_index
+              FROM
+                  cities C
+              LEFT JOIN
+                  cost_of_living COL ON C.country = COL.country AND C.city = COL.city
+              LEFT JOIN
+                  estimated_costs EC ON C.country = EC.country AND C.city = EC.city
+              ORDER BY cost_of_living_index DESC
+            ),
+            median_value AS (
+              SELECT
+                  PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY cost_of_living_index) AS median_value
+              FROM
+                  city_costs
+            ),
+            subset_below_median AS (
+              SELECT
+                  CC.country,
+                  CC.city,
+                  CC.cost_of_living_index
+              FROM
+                  city_costs CC
+                  CROSS JOIN median_value MV
+              WHERE
+                  CC.cost_of_living_index <= MV.median_value
+            ),
+            median_value_subset AS (
+              SELECT
+                  PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY cost_of_living_index) AS median_value
+              FROM
+                  subset_below_median
+            )
+            SELECT
+              SBM.country,
+              SBM.city,
+              SBM.cost_of_living_index
+            FROM
+              subset_below_median SBM
+              CROSS JOIN median_value_subset MVS
+            WHERE
+              SBM.cost_of_living_index <= MVS.median_value
+            ORDER BY
+              SBM.cost_of_living_index ASC;
     `, (err, data) => {
       if (err) {
         console.log(err);
@@ -719,67 +723,71 @@ const cheapest_cities = async function(req, res) {
     const offset = pageSize * (page - 1)
 
     connection.query(`
-      WITH country_avg AS (
-        SELECT
-            country,
-            AVG(cost_of_living_index) AS avg_cost_of_living_index
-        FROM
-            cost_of_living
-        GROUP BY
-            country
-        ORDER BY avg_cost_of_living_index DESC
+      WITH estimated_costs AS (
+          SELECT a.city_1 AS city, a.country_1 AS country,
+                 (c1.cost_of_living_index / distance_1^2 +
+                  c2.cost_of_living_index / distance_2^2 +
+                  c3.cost_of_living_index / distance_3^2) /
+                 (1 / distance_1^2 + 1 / distance_2^2 + 1 / distance_3^2) AS cost_of_living
+          FROM closest_cities a
+          JOIN cost_of_living c1
+          ON a.close_city_1 = c1.city
+          JOIN cost_of_living c2
+          ON a.close_city_2 = c2.city
+          JOIN cost_of_living c3
+          ON a.close_city_3 = c3.city
       ),
-      city_costs AS (
-        SELECT
-            C.country,
-            C.city,
-            COALESCE(
-                COL.cost_of_living_index,
-                CA.avg_cost_of_living_index,
-                (SELECT AVG(cost_of_living_index) FROM cost_of_living)
-            ) AS cost_of_living_index
-        FROM
-            cities C
-        LEFT JOIN
-            cost_of_living COL ON C.country = COL.country AND C.city = COL.city
-        LEFT JOIN
-            country_avg CA ON C.country = CA.country
-        ORDER BY cost_of_living_index DESC
-      ),
-      median_value AS (
-        SELECT
-            PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY cost_of_living_index) AS median_value
-        FROM
-            city_costs
-      ),
-      subset_below_median AS (
-        SELECT
-            CC.country,
-            CC.city,
-            CC.cost_of_living_index
-        FROM
-            city_costs CC
-            CROSS JOIN median_value MV
-        WHERE
-            CC.cost_of_living_index <= MV.median_value
-      ),
-      median_value_subset AS (
-        SELECT
-            PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY cost_of_living_index) AS median_value
-        FROM
-            subset_below_median
-      )
-      SELECT
-        SBM.country,
-        SBM.city,
-        SBM.cost_of_living_index
-      FROM
-        subset_below_median SBM
-        CROSS JOIN median_value_subset MVS
-      WHERE
-        SBM.cost_of_living_index <= MVS.median_value
-      ORDER BY
-        SBM.cost_of_living_index ASC
+            city_costs AS (
+              SELECT
+                  C.country,
+                  C.city,
+                  COALESCE(
+                      COL.cost_of_living_index,
+                      EC.cost_of_living,
+                      (SELECT AVG(cost_of_living_index) FROM cost_of_living)
+                  ) AS cost_of_living_index
+              FROM
+                  cities C
+              LEFT JOIN
+                  cost_of_living COL ON C.country = COL.country AND C.city = COL.city
+              LEFT JOIN
+                  estimated_costs EC ON C.country = EC.country AND C.city = EC.city
+              ORDER BY cost_of_living_index DESC
+            ),
+            median_value AS (
+              SELECT
+                  PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY cost_of_living_index) AS median_value
+              FROM
+                  city_costs
+            ),
+            subset_below_median AS (
+              SELECT
+                  CC.country,
+                  CC.city,
+                  CC.cost_of_living_index
+              FROM
+                  city_costs CC
+                  CROSS JOIN median_value MV
+              WHERE
+                  CC.cost_of_living_index <= MV.median_value
+            ),
+            median_value_subset AS (
+              SELECT
+                  PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY cost_of_living_index) AS median_value
+              FROM
+                  subset_below_median
+            )
+            SELECT
+              SBM.country,
+              SBM.city,
+              SBM.cost_of_living_index
+            FROM
+              subset_below_median SBM
+              CROSS JOIN median_value_subset MVS
+            WHERE
+              SBM.cost_of_living_index <= MVS.median_value
+            ORDER BY
+              SBM.cost_of_living_index ASC
       LIMIT ${pageSize} OFFSET ${offset};
     `, (err, data) => {
       if (err) {
