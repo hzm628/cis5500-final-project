@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, Typography, Box, Button } from '@mui/material';
 import { styled } from '@mui/system';
 import { useNavigate } from 'react-router-dom';
+
+import CityDetailsDialog from './CityDetailsDialog';
 
 const StyledCard = styled(Card)({
   borderRadius: '15px',
@@ -14,6 +16,17 @@ const StyledCard = styled(Card)({
 });
 
 export default function CityCard({ city }) {
+
+  const [dialogOpen, setDialogOpen] = useState(false);
+
+  const handleMoreInfoClick = () => {
+    setDialogOpen(true);
+  };
+
+  const handleDialogClose = () => {
+    setDialogOpen(false);
+  };
+  
   const navigate = useNavigate();
 
   const handleCompare = () => {
@@ -32,9 +45,10 @@ export default function CityCard({ city }) {
         countryName: city.country,
       },
     });
-  };
+  });
 
   return (
+    <>
     <StyledCard>
       <CardContent>
         <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold' }}>
@@ -62,7 +76,7 @@ export default function CityCard({ city }) {
           <strong>Crime Index:</strong>{' '}
           {city.crime_index !== undefined && city.crime_index !== null
             ? city.crime_index
-            : 'N/A'}
+            : 'N/A'} 
         </Typography>
         <Typography variant="body2" sx={{ mb: 2 }}>
           <strong>Safety Index:</strong>{' '}
@@ -77,14 +91,26 @@ export default function CityCard({ city }) {
             ? city.cost_of_living_index
             : 'N/A'}
         </Typography>
+        <Typography variant="body2" sx={{ mb: 2 }}>
+          <strong>Total Deaths from Terrorism:</strong>{' '}
+          {city.total_deaths_from_terrorism !== undefined &&
+          city.total_deaths_from_terrorism !== null
+            ? city.total_deaths_from_terrorism
+            : 'N/A'}
+        </Typography> 
       </CardContent>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', p: 2 }}>
+        <Button variant="contained" color="primary" onClick={handleMoreInfoClick}> 
+          More Info
+        </Button> 
+      </Box> 
       <Box sx={{ display: 'flex', justifyContent: 'space-between', p: 2 }}>
         <Button
           variant="contained"
           color="primary"
           onClick={handleCompare} // Navigate to Comparisons Page
         >
-          Compare
+          Compare 
         </Button>
         <Button
           variant="contained"
@@ -95,5 +121,13 @@ export default function CityCard({ city }) {
         </Button>
       </Box>
     </StyledCard>
+    {/* CityDetailsDialog */}
+    <CityDetailsDialog
+      open={dialogOpen}
+      cityName={city.city}
+      country={city.country}
+      onClose={handleDialogClose}
+    />
+  </>
   );
 }
