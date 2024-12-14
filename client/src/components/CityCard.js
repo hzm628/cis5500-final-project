@@ -1,6 +1,7 @@
 import React from 'react';
 import { Card, CardContent, Typography, Box, Button } from '@mui/material';
 import { styled } from '@mui/system';
+import { useNavigate } from 'react-router-dom';
 
 const StyledCard = styled(Card)({
   borderRadius: '15px',
@@ -13,6 +14,17 @@ const StyledCard = styled(Card)({
 });
 
 export default function CityCard({ city }) {
+  const navigate = useNavigate();
+
+  const handleCompare = () => {
+    navigate('/comparisons', {
+      state: {
+        city1: city.city,
+        country1: city.country,
+      },
+    });
+  };
+
   return (
     <StyledCard>
       <CardContent>
@@ -28,14 +40,14 @@ export default function CityCard({ city }) {
         <Typography variant="body2" sx={{ mb: 2 }}>
           <strong>Average Summer Temperature (°F):</strong>{' '}
           {city.avg_summer_temp !== undefined && city.avg_summer_temp !== null
-            ? Number(city.avg_summer_temp).toFixed(2) 
+            ? Number(city.avg_summer_temp).toFixed(2)
             : 'N/A'}
         </Typography>
         <Typography variant="body2" sx={{ mb: 2 }}>
           <strong>Average Winter Temperature (°F):</strong>{' '}
           {city.avg_winter_temp !== undefined && city.avg_winter_temp !== null
             ? Number(city.avg_winter_temp).toFixed(2)
-            : 'N/A'} 
+            : 'N/A'}
         </Typography>
         <Typography variant="body2" sx={{ mb: 2 }}>
           <strong>Crime Index:</strong>{' '}
@@ -61,18 +73,17 @@ export default function CityCard({ city }) {
         <Button
           variant="contained"
           color="primary"
-          /* TODO: handle onClick!!!!!!!! */
+          onClick={handleCompare} // Navigate to Comparisons Page
         >
           Compare
         </Button>
         <Button
           variant="contained"
           color="secondary"
-          /* TODO: handle onClick!!!!!!!! */
         >
           Find Similar Cities
         </Button>
       </Box>
     </StyledCard>
   );
-} 
+}
