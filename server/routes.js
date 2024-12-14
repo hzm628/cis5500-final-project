@@ -363,13 +363,14 @@ const city_us = async function (req, res) {
       CASE WHEN n.num_schools IS NULL THEN -1 ELSE n.num_schools END AS num_schools,
       CASE WHEN cdc.percent IS NULL THEN -1 ELSE cdc.percent END AS percent 
     FROM cities
-    INNER JOIN city_crime_index ci ON ci.city = cities.city
-    INNER JOIN cost_of_living ON cost_of_living.city = cities.city
-    INNER JOIN zillow_home_prices z ON z.city = cities.city
-    INNER JOIN us_crime u ON u.city = cities.city
-    INNER JOIN numSchools n ON n.city = cities.city
-    INNER JOIN cdc_local_health_data cdc ON cdc.location = cities.city
-    WHERE LOWER(city) = LOWER('${city_name}') AND cities.country = 'United States'
+    LEFT JOIN city_crime_index ci ON ci.city = cities.city
+    LEFT JOIN cost_of_living ON cost_of_living.city = cities.city
+    LEFT JOIN zillow_home_prices z ON z.city = cities.city
+    LEFT JOIN us_crime u ON u.city = cities.city
+    LEFT JOIN numSchools n ON n.city = cities.city
+    LEFT JOIN cdc_local_health_data cdc ON cdc.location = cities.city
+    WHERE LOWER(cities.city) = LOWER('${city_name}') AND cities.country = 'United States'
+    ORDER BY percent DESC
     `, (err, data) => {
      if (err) {
       console.log(err);
