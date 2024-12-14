@@ -39,11 +39,12 @@ const ComparisonsPage = () => {
   const [country2, setCountry2] = useState("");
   const [comparisonData, setComparisonData] = useState(null);
   const [error, setError] = useState(null);
-  const [isLoading, setIsLoading] = useState(false); 
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleCompare = async () => { 
+  const handleCompare = async () => {
     try {
       setError(null);
+      setComparisonData(null);
       setIsLoading(true);
 
       // Fetch data from API using the full URL from config
@@ -56,12 +57,15 @@ const ComparisonsPage = () => {
       }
 
       const data = await response.json();
+      if (data.length === 0) {
+        throw new Error("One or both cities do not exist. Please fix spelling and try again.");
+      }
+
       console.log("Response data:", data); // Debugging
       setComparisonData(data);
     } catch (err) {
       console.error("Error fetching comparison data:", err.message);
       setError(err.message);
-      setComparisonData(null);
     } finally {
       setIsLoading(false);
     }
@@ -70,9 +74,9 @@ const ComparisonsPage = () => {
   const allCategories = ["population", "cost_of_living", "terrorism_attacks", "crime_index", "average_temperature"];
   const maxValues = [25000000, 100, 50, 300, 100]; // Example max values for normalization
 
-  const radarData = comparisonData 
+  const radarData = comparisonData
     ? {
-        labels: allCategories, // Use explicit category labels 
+        labels: allCategories, // Use explicit category labels
         datasets: [
           {
             label: `${city1}, ${country1}`,
@@ -83,7 +87,7 @@ const ComparisonsPage = () => {
                   ? item[`${city1.toLowerCase().replace(/ /g, "_")}_${country1.toLowerCase().replace(/ /g, "_")}`] || 0
                   : 0;
               }),
-              maxValues 
+              maxValues
             ),
             backgroundColor: "rgba(54, 162, 235, 0.2)",
             borderColor: "rgba(54, 162, 235, 1)",
@@ -168,7 +172,7 @@ const ComparisonsPage = () => {
         </Typography>
       )}
 
-      {comparisonData && (
+      {comparisonData && !error && (
         <Grid container spacing={4} justifyContent="center">
           <Grid item xs={12} md={6}>
             <RadarCard>
