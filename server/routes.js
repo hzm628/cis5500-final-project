@@ -119,74 +119,70 @@ const compare_cities = async function (req, res) {
           WHERE (LOWER(country) = LOWER('${country2}') AND LOWER(city) = LOWER('${city2}'))
           ORDER BY city_population DESC
           LIMIT 1
-      ),
-      populations AS (
-          SELECT 'population' AS category,
-                 a.city_population AS ${col1},
-                 b.city_population AS ${col2}
-          FROM city_one a, city_two b
-      ),
-      cost_of_living AS (
-          SELECT 'cost_of_living' AS category,
-                 a.cost_of_living_index AS ${col1},
-                 b.cost_of_living_index AS ${col2}
-          FROM (
-              SELECT * FROM city_one x
-              LEFT JOIN cost_of_living l ON (x.city = l.city AND x.country = l.country)
-          ) a,
-          (
-              SELECT * FROM city_two y
-              LEFT JOIN cost_of_living l ON (y.city = l.city AND y.country = l.country)
-          ) b
-      ),
-      terrorism_attacks AS (
-          SELECT 'terrorism_attacks' AS category,
-                 a.count AS ${col1},
-                 b.count AS ${col2}
-          FROM (
-              SELECT COUNT(*) FROM city_one x
-              LEFT JOIN global_terrorism l ON (x.city = l.city AND x.country = l.country)
-          ) a,
-          (
-              SELECT COUNT(*) FROM city_two y
-              LEFT JOIN global_terrorism l ON (y.city = l.city AND y.country = l.country)
-          ) b
-      ),
-      crime_index AS (
-          SELECT 'crime_index' AS category,
-                 a.crime_index AS ${col1},
-                 b.crime_index AS ${col2}
-          FROM (
-              SELECT * FROM city_one x
-              LEFT JOIN city_crime_index l ON (x.city = l.city AND x.country = TRIM(l.country))
-          ) a,
-          (
-              SELECT * FROM city_two y
-              LEFT JOIN city_crime_index l ON (y.city = l.city AND y.country = TRIM(l.country))
-          ) b
-      ),
-      avg_temperature AS (
-          SELECT 'average_temperature' AS category,
-                 a.avg AS ${col1},
-                 b.avg AS ${col2}
-          FROM (
-              SELECT ROUND(AVG(avg_temperature), 2) AS avg FROM city_one x
-              LEFT JOIN city_temperature l ON (x.city = l.city AND x.country = l.country)
-          ) a,
-          (
-              SELECT ROUND(AVG(avg_temperature), 2) AS avg FROM city_two y
-              LEFT JOIN city_temperature l ON (y.city = l.city AND y.country = l.country)
-          ) b
       )
-      SELECT * FROM populations
-      UNION ALL
-      SELECT * FROM cost_of_living
-      UNION ALL
-      SELECT * FROM terrorism_attacks
-      UNION ALL
-      SELECT * FROM crime_index
-      UNION ALL
-      SELECT * FROM avg_temperature;
+      SELECT * FROM (SELECT 'population'      AS category,
+                                     a.city_population AS ${col1},
+                                     b.city_population AS ${col2}
+                              FROM city_one a,
+                                   city_two b
+          ) AS population
+          UNION ALL
+          SELECT * FROM (SELECT 'cost_of_living'      AS category,
+                                     a.cost_of_living_index AS ${col1},
+                                     b.cost_of_living_index AS ${col2}
+                              FROM (
+                                  SELECT * FROM city_one x
+                                      LEFT JOIN cost_of_living l
+                                      ON (x.city = l.city AND x.country = l.country)
+                                   ) a,
+                                  (
+                                  SELECT * FROM city_two y
+                                      LEFT JOIN cost_of_living l
+                                      ON (y.city = l.city AND y.country = l.country)
+                                   ) b) AS cost_of_living
+          UNION ALL
+          SELECT * FROM (SELECT 'terrorism_attacks'      AS category,
+                                     a.count AS ${col1},
+                                     b.count AS ${col2}
+                              FROM (
+                                  SELECT COUNT(*) FROM city_one x
+                                      LEFT JOIN global_terrorism l
+                                      ON (x.city = l.city AND x.country = l.country)
+                                   ) a,
+                                  (
+                                  SELECT COUNT(*) FROM city_two y
+                                      LEFT JOIN global_terrorism l
+                                      ON (y.city = l.city AND y.country = l.country)
+                                   ) b) AS terrorism
+          UNION ALL
+          SELECT * FROM (SELECT 'crime_index'      AS category,
+                                     a.crime_index AS ${col1},
+                                     b.crime_index AS ${col2}
+                              FROM (
+                                  SELECT * FROM city_one x
+                                      LEFT JOIN city_crime_index l
+                                      ON (x.city = l.city AND x.country = TRIM(l.country))
+                                   ) a,
+                                  (
+                                  SELECT * FROM city_two y
+                                      LEFT JOIN city_crime_index l
+                                      ON (y.city = l.city AND y.country = TRIM(l.country))
+                                   ) b
+          ) AS crime_index
+          UNION ALL
+          SELECT * FROM (SELECT 'average_temperature'      AS category,
+                                     a.avg AS ${col1},
+                                     b.avg AS ${col2}
+                              FROM (
+                                  SELECT ROUND(AVG(avg_temperature), 2) AS avg FROM city_one x
+                                      LEFT JOIN city_temperature l
+                                      ON (x.city = l.city AND x.country = l.country)
+                                   ) a,
+                                  (
+                                  SELECT ROUND(AVG(avg_temperature), 2) AS avg FROM city_two y
+                                      LEFT JOIN city_temperature l
+                                      ON (y.city = l.city AND y.country = l.country)
+                                   ) b) AS avg_temperature;
       `,
       (err, data) => {
         if (err) {
