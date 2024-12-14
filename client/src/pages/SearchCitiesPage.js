@@ -164,7 +164,7 @@ export default function SearchCitiesPage() {
             onChange={(e, newValue) => setCrimeIndex(newValue)}
             valueLabelDisplay="auto"
             min={0}
-            max={400}
+            max={85}
           />
         </Grid>
         <Grid item xs={12} sm={6}>
@@ -174,7 +174,7 @@ export default function SearchCitiesPage() {
             onChange={(e, newValue) => setSafetyIndex(newValue)}
             valueLabelDisplay="auto"
             min={0}
-            max={100}
+            max={90}
           />
         </Grid>
 
@@ -186,7 +186,7 @@ export default function SearchCitiesPage() {
             onChange={(e, newValue) => setCostOfLivingIndex(newValue)}
             valueLabelDisplay="auto"
             min={0}
-            max={100}
+            max={102}
           />
         </Grid>
 
@@ -198,7 +198,7 @@ export default function SearchCitiesPage() {
             onChange={(e, newValue) => setTerrorismDeaths(newValue)}
             valueLabelDisplay="auto"
             min={0}
-            max={1000}
+            max={1570}
           />
         </Grid>
 
@@ -238,4 +238,3 @@ export default function SearchCitiesPage() {
     </Container>
   );
 }
-
