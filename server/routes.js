@@ -34,11 +34,7 @@ const similar_cities = async function (req, res) {
     if (city_name && country_name) {
       connection.query(
         `
-        WITH city_clean AS (
-          SELECT DISTINCT ON (city, country) * FROM cities
-          ORDER BY city, country, city_population DESC
-        ),
-        attacks_by_city AS (
+        WITH attacks_by_city AS (
           SELECT city, COUNT(*) AS num_attacks, SUM(nkill) AS num_deaths, SUM(nwound) AS num_injured
           FROM global_terrorism
           GROUP BY city
@@ -53,11 +49,11 @@ const similar_cities = async function (req, res) {
             NTILE(100) OVER (ORDER BY c.num_attacks) AS terrorism_quantile,
             NTILE(100) OVER (ORDER BY c.num_deaths) AS terrorism_deaths_quantile,
             NTILE(100) OVER (ORDER BY c.num_injured) AS terrorism_injured_quantile
-          FROM city_clean a
+          FROM cities a
           JOIN country b ON (a.country = b.country_name)
           JOIN attacks_by_city c ON (a.city = c.city)
           WHERE c.num_attacks > 0
-            AND ((LOWER(a.city) = LOWER($1) AND LOWER(a.country) = LOWER($2)) OR (a.city_population > 100000))
+            AND ((LOWER(a.city) = LOWER($1) AND LOWER(a.country) = LOWER($2)) OR (a.city_population > 10000))
         )
         SELECT 
           a.city AS city_1, a.country AS country_1, 
