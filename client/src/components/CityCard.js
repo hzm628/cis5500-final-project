@@ -45,7 +45,7 @@ export default function CityCard({ city }) {
         countryName: city.country,
       },
     });
-  });
+  };
 
   return (
     <>
