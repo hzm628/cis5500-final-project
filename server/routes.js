@@ -57,7 +57,7 @@ const similar_cities = async function (req, res) {
           JOIN country b ON (a.country = b.country_name)
           JOIN attacks_by_city c ON (a.city = c.city)
           WHERE c.num_attacks > 0
-            AND ((a.city = $1 AND a.country = $2) OR (a.city_population > 100000))
+            AND ((LOWER(a.city) = LOWER($1) AND LOWER(a.country) = LOWER($2)) OR (a.city_population > 100000))
         )
         SELECT 
           a.city AS city_1, a.country AS country_1, 
@@ -73,7 +73,7 @@ const similar_cities = async function (req, res) {
           ) / 7.0, 2) AS similarity_score
         FROM (
           SELECT * FROM city_quantiles x
-          WHERE x.city = $1 AND x.country = $2
+          WHERE LOWER(x.city) = LOWER($1) AND LOWER(x.country) = LOWER($2)
         ) a, city_quantiles b
         WHERE (a.city <> b.city OR a.country <> b.country)
         ORDER BY similarity_score DESC, a.population + b.population DESC
