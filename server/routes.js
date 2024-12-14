@@ -112,13 +112,13 @@ const compare_cities = async function(req, res) {
   connection.query(`
     WITH city_one AS (
         SELECT * FROM cities
-        WHERE (country = '${country1}' AND city = '${city1}')
+        WHERE (LOWER(country) = LOWER('${country1}') AND LOWER(city) = LOWER('${city1}'))
         ORDER BY city_population DESC
         LIMIT 1
     ),
         city_two AS (
         SELECT * FROM cities
-        WHERE (country = '${country2}' AND city = '${city2}')
+        WHERE (LOWER(country) = LOWER('${country2}') AND LOWER(city) = LOWER('${city2}'))
         ORDER BY city_population DESC
         LIMIT 1
      ),
@@ -263,7 +263,7 @@ const search_countries = async function(req, res) {
     connection.query(`
       SELECT country_name, population, latitude, longitude
       FROM country
-      WHERE (country_name LIKE '%${country_name}%')
+      WHERE (LOWER(country_name) LIKE LOWER('%${country_name}%'))
       ORDER BY country_name ASC
     `, (err, data) => {
       if (err) {
@@ -324,7 +324,7 @@ const search_cities = async function(req, res) {
     connection.query(`
       SELECT city, country, city_population, city_latitude, city_longitude
       FROM cities
-      WHERE (city LIKE '%${city_name}%')
+      WHERE (LOWER(city) LIKE LOWER('%${city_name}%'))
       ORDER BY city ASC
     `, (err, data) => {
       if (err) {
@@ -368,8 +368,8 @@ const city_us = async function (req, res) {
     INNER JOIN zillow_home_prices z ON z.city = cities.city
     INNER JOIN us_crime u ON u.city = cities.city
     INNER JOIN numSchools n ON n.city = cities.city
-    INNER JOIN cdc_local_health_data cdc ON cdc.location = cities.city;
-    WHERE city = '${city_name}' AND country = 'United States'
+    INNER JOIN cdc_local_health_data cdc ON cdc.location = cities.city
+    WHERE LOWER(city) = LOWER('${city_name}') AND cities.country = 'United States'
     `, (err, data) => {
      if (err) {
       console.log(err);
@@ -624,7 +624,7 @@ const largest_cities = async function (req, res) {
   connection.query(`
     SELECT city, city_population
     FROM cities
-    WHERE country = '${country}'
+    WHERE LOWER(country) = LOWER('${country}')
     ORDER BY city_population DESC
     LIMIT 10;
     `,
