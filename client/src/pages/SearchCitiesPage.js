@@ -190,6 +190,18 @@ export default function SearchCitiesPage() {
           />
         </Grid>
 
+        {/* Maximum Terrorism Deaths */}
+        <Grid item xs={12} sm={6}>
+          <Typography gutterBottom>Maximum Terrorism Deaths</Typography>
+          <Slider
+            value={terrorismDeaths}
+            onChange={(e, newValue) => setTerrorismDeaths(newValue)}
+            valueLabelDisplay="auto"
+            min={0}
+            max={1000}
+          />
+        </Grid>
+
         {/* Checkbox */}
         <Grid item xs={12}>
           <FormControlLabel
