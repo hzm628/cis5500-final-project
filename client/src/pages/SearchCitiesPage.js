@@ -20,8 +20,10 @@ export default function SearchCitiesPage() {
   const searchParams = new URLSearchParams(location.search);
 
   const [data, setData] = useState([]);
+  const [filteredData, setFilteredData] = useState([]);
   const [loading, setLoading] = useState(false);
 
+  const [city, setCity] = useState('');
   const [country, setCountry] = useState(searchParams.get('country') || '');
   const [minSummerTemp, setMinSummerTemp] = useState([-999, 999]);
   const [minWinterTemp, setMinWinterTemp] = useState([-999, 999]);
@@ -70,6 +72,13 @@ export default function SearchCitiesPage() {
     fetchCities();
   }, []);
 
+  useEffect(() => {
+    const filtered = data.filter((cityObj) =>
+      city === '' ? true : cityObj.city.toLowerCase().includes(city.toLowerCase())
+    );
+    setFilteredData(filtered);
+  }, [city, data]);
+
   return (
     <Container sx={{ mt: 5 }}>
       <Typography variant="h4" gutterBottom textAlign="center">
@@ -81,6 +90,16 @@ export default function SearchCitiesPage() {
 
       {/* Filters */}
       <Grid container spacing={3} sx={{ mb: 3 }}>
+        {/* City Field */}
+        <Grid item xs={12}>
+          <TextField
+            label="City"
+            fullWidth
+            value={city}
+            onChange={(e) => setCity(e.target.value)}
+          />
+        </Grid>
+
         {/* Country Field */}
         <Grid item xs={12}>
           <TextField
@@ -197,7 +216,7 @@ export default function SearchCitiesPage() {
             <CircularProgress />
           </Grid>
         ) : (
-          data.map((city, index) => (
+          filteredData.map((city, index) => (
             <Grid item xs={12} sm={6} md={4} key={index}>
               <CityCard city={city} />
             </Grid>

@@ -54,7 +54,7 @@ function CountryDetailsDialog({ countryName, open, onClose }) {
             </Typography>
             <Typography variant="body1" sx={{ mb: 2 }}>
               <strong>GDP:</strong> {countryDetails?.gdp !== -1 ? `$${countryDetails?.gdp.toLocaleString()} USD` : 'N/A'}
-            </Typography>
+            </Typography> 
             <Typography variant="body1" sx={{ mb: 2 }}>
               <strong>Life Expectancy:</strong> {countryDetails?.life_expectancy !== -1 ? `${countryDetails?.life_expectancy} years` : 'N/A'}
             </Typography>

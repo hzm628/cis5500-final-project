@@ -342,7 +342,7 @@ const city_us = async function (req, res) {
   const city_name = req.query.city_name ?? '';
   
   connection.query(`
-    WITH numSchools AS (
+  WITH numSchools AS (
     SELECT city, COUNT(*) AS num_schools
     FROM schools
     GROUP BY city
@@ -380,7 +380,6 @@ const city_us = async function (req, res) {
   });
 }
 
-
 // Route 8: GET /preference_search
 const preference_search = async function (req, res) {
 
@@ -395,14 +394,13 @@ const preference_search = async function (req, res) {
   const maxCostOfLivingIndex = req.query.max_cost_of_living_index ?? 9999;
   const maxTerrorismDeaths = req.query.max_terrorism_deaths ?? 9999;
 
-  const country = req.query.country;
-  const includeMissingData = req.query.include_missing_data === 'true';
-
   const page = req.query.page;
   const pageSize = req.query.page_size ?? 10;
 
+  const country = req.query.country;
   const countryFilter = country ? `AND LOWER(st.country) = LOWER('${country}')` : '';
 
+  const includeMissingData = req.query.include_missing_data === 'true';
   const missingDataCondition = includeMissingData
     ? '' 
     : `
