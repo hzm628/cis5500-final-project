@@ -25,6 +25,15 @@ export default function CityCard({ city }) {
     });
   };
 
+  const handleFindSimilar = () => {
+    navigate('/similarities', {
+      state: {
+        cityName: city.city,
+        countryName: city.country,
+      },
+    });
+  };
+
   return (
     <StyledCard>
       <CardContent>
@@ -80,6 +89,7 @@ export default function CityCard({ city }) {
         <Button
           variant="contained"
           color="secondary"
+          onClick={handleFindSimilar} // Navigate to Similarities Page
         >
           Find Similar Cities
         </Button>

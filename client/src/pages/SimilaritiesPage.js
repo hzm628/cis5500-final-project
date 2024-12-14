@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Container,
   Typography,
@@ -10,6 +10,7 @@ import {
   TextField,
 } from "@mui/material";
 import { styled } from "@mui/system";
+import { useLocation } from "react-router-dom"; // Import for accessing location state
 import config from "../config.json"; // Import configuration
 
 const CityCard = styled(Paper)({
@@ -18,18 +19,29 @@ const CityCard = styled(Paper)({
   textAlign: "center",
   boxShadow: "0 4px 10px rgba(0, 0, 0, 0.2)",
   transition: "transform 0.3s ease, box-shadow 0.3s ease",
-  '&:hover': {
+  "&:hover": {
     transform: "scale(1.05)",
     boxShadow: "0 8px 20px rgba(0, 0, 0, 0.3)",
   },
 });
 
 const SimilaritiesPage = () => {
-  const [cityName, setCityName] = useState("");
-  const [countryName, setCountryName] = useState("");
+  const location = useLocation(); // Access state data passed via navigate
+  const prefilledCity = location.state?.cityName || "";
+  const prefilledCountry = location.state?.countryName || "";
+
+  const [cityName, setCityName] = useState(prefilledCity);
+  const [countryName, setCountryName] = useState(prefilledCountry);
   const [similarCities, setSimilarCities] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
+
+  useEffect(() => {
+    // Automatically fetch similar cities if prefilled data exists
+    if (prefilledCity && prefilledCountry) {
+      fetchSimilarCities();
+    }
+  }, [prefilledCity, prefilledCountry]);
 
   const fetchSimilarCities = async () => {
     try {
@@ -38,7 +50,11 @@ const SimilaritiesPage = () => {
       setSimilarCities([]);
 
       // Fetch data from API using the full URL from config
-      const response = await fetch(`http://${config.server_host}:${config.server_port}/similar_cities?city_name=${encodeURIComponent(cityName)}&country_name=${encodeURIComponent(countryName)}`);
+      const response = await fetch(
+        `http://${config.server_host}:${config.server_port}/similar_cities?city_name=${encodeURIComponent(
+          cityName
+        )}&country_name=${encodeURIComponent(countryName)}`
+      );
 
       const rawResponse = await response.text();
       console.log("Raw Response:", rawResponse); // Debugging log
