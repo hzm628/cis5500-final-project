@@ -35,44 +35,77 @@ const similar_cities = async function (req, res) {
       connection.query(
         `
         WITH attacks_by_city AS (
-          SELECT city, COUNT(*) AS num_attacks, SUM(nkill) AS num_deaths, SUM(nwound) AS num_injured
-          FROM global_terrorism
-          GROUP BY city
+            SELECT 
+                city, country, 
+                COUNT(*) AS num_attacks, 
+                SUM(nkill) AS num_deaths, 
+                SUM(nwound) AS num_injured
+            FROM global_terrorism
+            GROUP BY city, country
+        ),
+        summer_temp AS (
+            SELECT
+                city, country,
+                AVG(avg_temperature) AS avg_summer_temp
+            FROM city_temperature
+            WHERE month IN (6, 7, 8)
+            GROUP BY country, city
+        ),
+        winter_temp AS (
+            SELECT
+                city, country,
+                AVG(avg_temperature) AS avg_winter_temp
+            FROM city_temperature
+            WHERE month IN (12, 1, 2)
+            GROUP BY country, city
+        ),
+        crime_data AS (
+            SELECT
+                city, country, crime_index, safety_index
+            FROM city_crime_index
+        ),
+        cost_of_living_data AS (
+            SELECT
+                city, country, cost_of_living_index
+            FROM cost_of_living
         ),
         city_quantiles AS (
-          SELECT
-            a.city, a.country, a.city_population AS population,
-            NTILE(100) OVER (ORDER BY a.city_population) AS city_pop_quantile,
-            NTILE(100) OVER (ORDER BY a.city_latitude) AS latitude_quantile,
-            NTILE(100) OVER (ORDER BY a.city_longitude) AS longitude_quantile,
-            NTILE(100) OVER (ORDER BY b.population) AS country_pop_quantile,
-            NTILE(100) OVER (ORDER BY c.num_attacks) AS terrorism_quantile,
-            NTILE(100) OVER (ORDER BY c.num_deaths) AS terrorism_deaths_quantile,
-            NTILE(100) OVER (ORDER BY c.num_injured) AS terrorism_injured_quantile
-          FROM cities a
-          JOIN country b ON (a.country = b.country_name)
-          JOIN attacks_by_city c ON (a.city = c.city)
-          WHERE c.num_attacks > 0
-            AND ((LOWER(a.city) = LOWER($1) AND LOWER(a.country) = LOWER($2)) OR (a.city_population > 10000))
+            SELECT
+                a.city, a.country, a.city_population AS population,
+                st.avg_summer_temp, wt.avg_winter_temp,
+                cd.crime_index, cd.safety_index, cld.cost_of_living_index,
+                td.num_deaths AS total_terrorism_deaths,
+                NTILE(100) OVER (ORDER BY a.city_population) AS city_pop_quantile,
+                NTILE(100) OVER (ORDER BY a.city_latitude) AS latitude_quantile,
+                NTILE(100) OVER (ORDER BY a.city_longitude) AS longitude_quantile,
+                NTILE(100) OVER (ORDER BY td.num_attacks) AS terrorism_quantile
+            FROM cities a
+            LEFT JOIN summer_temp st ON a.city = st.city AND a.country = st.country
+            LEFT JOIN winter_temp wt ON a.city = wt.city AND a.country = wt.country
+            LEFT JOIN crime_data cd ON a.city = cd.city AND a.country = cd.country
+            LEFT JOIN cost_of_living_data cld ON a.city = cld.city AND a.country = cld.country
+            LEFT JOIN attacks_by_city td ON a.city = td.city AND a.country = td.country
+            WHERE ((LOWER(a.city) = LOWER($1) AND LOWER(a.country) = LOWER($2)) OR a.city_population > 10000)
         )
         SELECT 
-          a.city AS city_1, a.country AS country_1, 
-          b.city AS city_2, b.country AS country_2,
-          ROUND(100 - (
-            ABS(a.city_pop_quantile - b.city_pop_quantile) + 
-            ABS(a.latitude_quantile - b.latitude_quantile) +
-            ABS(a.longitude_quantile - b.longitude_quantile) +
-            ABS(a.country_pop_quantile - b.country_pop_quantile) +
-            ABS(a.terrorism_quantile - b.terrorism_quantile) +
-            ABS(a.terrorism_deaths_quantile - b.terrorism_deaths_quantile) +
-            ABS(a.terrorism_injured_quantile - b.terrorism_injured_quantile)
-          ) / 7.0, 2) AS similarity_score
-        FROM (
-          SELECT * FROM city_quantiles x
-          WHERE LOWER(x.city) = LOWER($1) AND LOWER(x.country) = LOWER($2)
-        ) a, city_quantiles b
+            a.city AS city_1, a.country AS country_1, 
+            b.city AS city_2, b.country AS country_2,
+            b.avg_summer_temp, b.avg_winter_temp,
+            b.population AS city_population,
+            b.crime_index, b.safety_index, b.cost_of_living_index,
+            b.total_terrorism_deaths,
+            ROUND(100 - (
+                ABS(a.city_pop_quantile - b.city_pop_quantile) + 
+                ABS(a.latitude_quantile - b.latitude_quantile) +
+                ABS(a.longitude_quantile - b.longitude_quantile) +
+                ABS(a.terrorism_quantile - b.terrorism_quantile)
+            ) / 4.0, 2) AS similarity_score
+        FROM city_quantiles a, city_quantiles b
         WHERE (a.city <> b.city OR a.country <> b.country)
-        ORDER BY similarity_score DESC, a.population + b.population DESC
+          AND LOWER(a.city) = LOWER($1) 
+          AND LOWER(a.country) = LOWER($2)
+        ORDER BY similarity_score DESC, b.population DESC
+        LIMIT 20;
         `,
         [city_name, country_name],
         (err, data) => {

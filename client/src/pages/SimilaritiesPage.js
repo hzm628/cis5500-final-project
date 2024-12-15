@@ -9,24 +9,12 @@ import {
   Paper,
   TextField,
 } from "@mui/material";
-import { styled } from "@mui/system";
-import { useLocation } from "react-router-dom"; // Import for accessing location state
+import { useLocation } from "react-router-dom";
+import CityCard from "../components/CityCard";
 import config from "../config.json"; // Import configuration
 
-const CityCard = styled(Paper)({
-  borderRadius: "15px",
-  padding: "1.5rem",
-  textAlign: "center",
-  boxShadow: "0 4px 10px rgba(0, 0, 0, 0.2)",
-  transition: "transform 0.3s ease, box-shadow 0.3s ease",
-  "&:hover": {
-    transform: "scale(1.05)",
-    boxShadow: "0 8px 20px rgba(0, 0, 0, 0.3)",
-  },
-});
-
-const SimilaritiesPage = () => {
-  const location = useLocation(); // Access state data passed via navigate
+export default function SimilaritiesPage() {
+  const location = useLocation();
   const prefilledCity = location.state?.cityName || "";
   const prefilledCountry = location.state?.countryName || "";
 
@@ -37,7 +25,6 @@ const SimilaritiesPage = () => {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    // Automatically fetch similar cities if prefilled data exists
     if (prefilledCity && prefilledCountry) {
       fetchSimilarCities();
     }
@@ -49,22 +36,19 @@ const SimilaritiesPage = () => {
       setError(null);
       setSimilarCities([]);
 
-      // Fetch data from API using the full URL from config
       const response = await fetch(
         `http://${config.server_host}:${config.server_port}/similar_cities?city_name=${encodeURIComponent(
           cityName
         )}&country_name=${encodeURIComponent(countryName)}`
       );
 
-      const rawResponse = await response.text();
-      console.log("Raw Response:", rawResponse); // Debugging log
-
       if (!response.ok) {
-        const errorData = JSON.parse(rawResponse);
-        throw new Error(errorData.error || "Unexpected server error");
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to fetch similar cities.");
       }
 
-      const data = JSON.parse(rawResponse);
+      const data = await response.json();
+      console.log("Fetched Data:", data);
       setSimilarCities(data);
     } catch (err) {
       console.error("Error fetching similar cities:", err);
@@ -95,14 +79,16 @@ const SimilaritiesPage = () => {
           onChange={(e) => setCountryName(e.target.value)}
           sx={{ mb: 2, width: "45%" }}
         />
-        <Button
-          variant="contained"
-          color="primary"
-          onClick={fetchSimilarCities}
-          disabled={isLoading || !cityName || !countryName}
-        >
-          {isLoading ? <CircularProgress size={24} /> : "Get Similar Cities"}
-        </Button>
+        <Box>
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={fetchSimilarCities}
+            disabled={isLoading || !cityName || !countryName}
+          >
+            {isLoading ? <CircularProgress size={24} /> : "Get Similar Cities"}
+          </Button>
+        </Box>
       </Box>
 
       {error && (
@@ -112,27 +98,40 @@ const SimilaritiesPage = () => {
       )}
 
       <Grid container spacing={4} justifyContent="center">
-        {similarCities.map((city, index) => (
-          <Grid item xs={12} sm={6} md={4} key={index}>
-            <CityCard>
-              <Typography variant="h6" gutterBottom>
-                {city.city_2}, {city.country_2}
-              </Typography>
-              <Typography variant="body2" color="textSecondary">
-                Similarity Score: {city.similarity_score} %
-              </Typography>
-            </CityCard>
+        {isLoading ? (
+          <Grid item xs={12} sx={{ textAlign: "center" }}>
+            <CircularProgress />
           </Grid>
-        ))}
+        ) : similarCities.length > 0 ? (
+          similarCities.map((city, index) => (
+            <Grid item xs={12} sm={6} md={4} key={index}>
+              <CityCard
+                city={{
+                  city: city.city_2,
+                  country: city.country_2,
+                  city_population: city.city_population,
+                  avg_summer_temp: city.avg_summer_temp,
+                  avg_winter_temp: city.avg_winter_temp,
+                  crime_index: city.crime_index,
+                  safety_index: city.safety_index,
+                  cost_of_living_index: city.cost_of_living_index,
+                  total_deaths_from_terrorism: city.total_terrorism_deaths,
+                }}
+              />
+              <Typography
+                variant="body2"
+                sx={{ mt: 1, textAlign: "center", fontWeight: "bold" }}
+              >
+                Similarity Score: {city.similarity_score}%
+              </Typography>
+            </Grid>
+          ))
+        ) : (
+          <Typography variant="body2" textAlign="center" sx={{ mt: 3 }}>
+            No similar cities found. Please try a different input.
+          </Typography>
+        )}
       </Grid>
-
-      {isLoading && (
-        <Box textAlign="center" sx={{ mt: 4 }}>
-          <CircularProgress />
-        </Box>
-      )}
     </Container>
   );
-};
-
-export default SimilaritiesPage;
+}
