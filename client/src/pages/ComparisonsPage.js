@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Radar } from "react-chartjs-2";
-import "chart.js/auto"; // Ensures Chart.js is properly imported
+import "chart.js/auto";
 import {
   Container,
   Typography,
@@ -18,7 +18,7 @@ import {
   TableRow,
 } from "@mui/material";
 import { styled } from "@mui/system";
-import config from "../config.json"; // Import configuration
+import config from "../config.json";
 import { useLocation } from "react-router-dom";
 
 const RadarCard = styled(Paper)({
@@ -49,14 +49,22 @@ const fixedMaxValues = [
 ];
 
 const ComparisonsPage = () => {
-  const location = useLocation(); // Access location state for pre-filled data
+  const location = useLocation(); 
   const prefilledCity1 = location.state?.city1 || "";
   const prefilledCountry1 = location.state?.country1 || "";
 
-  const [city1, setCity1] = useState(prefilledCity1);
-  const [country1, setCountry1] = useState(prefilledCountry1);
-  const [city2, setCity2] = useState("");
-  const [country2, setCountry2] = useState("");
+  // Input states (change on typing)
+  const [inputCity1, setInputCity1] = useState(prefilledCity1);
+  const [inputCountry1, setInputCountry1] = useState(prefilledCountry1);
+  const [inputCity2, setInputCity2] = useState("");
+  const [inputCountry2, setInputCountry2] = useState("");
+
+  // Compared states (only update on Compare click)
+  const [comparedCity1, setComparedCity1] = useState(prefilledCity1);
+  const [comparedCountry1, setComparedCountry1] = useState(prefilledCountry1);
+  const [comparedCity2, setComparedCity2] = useState("");
+  const [comparedCountry2, setComparedCountry2] = useState("");
+
   const [comparisonData, setComparisonData] = useState(null);
   const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -70,13 +78,18 @@ const ComparisonsPage = () => {
 
   const handleCompare = async () => {
     try {
+      // Update compared states to "freeze" input
+      setComparedCity1(inputCity1);
+      setComparedCountry1(inputCountry1);
+      setComparedCity2(inputCity2);
+      setComparedCountry2(inputCountry2);
+
       setError(null);
       setComparisonData(null);
       setIsLoading(true);
 
-      // Fetch data from API using the full URL from config
-      const query = `http://${config.server_host}:${config.server_port}/compare_cities?city1=${encodeURIComponent(city1)}&country1=${encodeURIComponent(country1)}&city2=${encodeURIComponent(city2)}&country2=${encodeURIComponent(country2)}`;
-      console.log("Querying:", query); // Debugging
+      const query = `http://${config.server_host}:${config.server_port}/compare_cities?city1=${encodeURIComponent(inputCity1)}&country1=${encodeURIComponent(inputCountry1)}&city2=${encodeURIComponent(inputCity2)}&country2=${encodeURIComponent(inputCountry2)}`;
+      console.log("Querying:", query);
       const response = await fetch(query);
 
       if (!response.ok) {
@@ -89,7 +102,7 @@ const ComparisonsPage = () => {
         throw new Error("One or both cities do not exist. Please fix spelling and try again.");
       }
 
-      console.log("Response data:", data); // Debugging
+      console.log("Response data:", data);
       setComparisonData(data);
     } catch (err) {
       console.error("Error fetching comparison data:", err.message);
@@ -103,15 +116,15 @@ const ComparisonsPage = () => {
 
   const radarData = comparisonData
     ? {
-        labels: allCategories, // Use explicit category labels
+        labels: allCategories,
         datasets: [
           {
-            label: `${city1}, ${country1}`,
+            label: `${comparedCity1}, ${comparedCountry1}`,
             data: normalizeData(
               allCategories.map((category) => {
                 const item = comparisonData.find((data) => data.category === category);
                 return item
-                  ? item[`${city1.toLowerCase().replace(/ /g, "_")}_${country1.toLowerCase().replace(/ /g, "_")}`] || 0
+                  ? item[`${comparedCity1.toLowerCase().replace(/ /g, "_")}_${comparedCountry1.toLowerCase().replace(/ /g, "_")}`] || 0
                   : 0;
               }),
               fixedMaxValues
@@ -121,12 +134,12 @@ const ComparisonsPage = () => {
             borderWidth: 2,
           },
           {
-            label: `${city2}, ${country2}`,
+            label: `${comparedCity2}, ${comparedCountry2}`,
             data: normalizeData(
               allCategories.map((category) => {
                 const item = comparisonData.find((data) => data.category === category);
                 return item
-                  ? item[`${city2.toLowerCase().replace(/ /g, "_")}_${country2.toLowerCase().replace(/ /g, "_")}`] || 0
+                  ? item[`${comparedCity2.toLowerCase().replace(/ /g, "_")}_${comparedCountry2.toLowerCase().replace(/ /g, "_")}`] || 0
                   : 0;
               }),
               fixedMaxValues
@@ -153,15 +166,15 @@ const ComparisonsPage = () => {
           <TextField
             label="Enter City 1"
             variant="outlined"
-            value={city1}
-            onChange={(e) => setCity1(e.target.value)}
+            value={inputCity1}
+            onChange={(e) => setInputCity1(e.target.value)}
             sx={{ width: "30%" }}
           />
           <TextField
             label="Enter Country 1"
             variant="outlined"
-            value={country1}
-            onChange={(e) => setCountry1(e.target.value)}
+            value={inputCountry1}
+            onChange={(e) => setInputCountry1(e.target.value)}
             sx={{ width: "30%" }}
           />
         </Box>
@@ -169,15 +182,15 @@ const ComparisonsPage = () => {
           <TextField
             label="Enter City 2"
             variant="outlined"
-            value={city2}
-            onChange={(e) => setCity2(e.target.value)}
+            value={inputCity2}
+            onChange={(e) => setInputCity2(e.target.value)}
             sx={{ width: "30%" }}
           />
           <TextField
             label="Enter Country 2"
             variant="outlined"
-            value={country2}
-            onChange={(e) => setCountry2(e.target.value)}
+            value={inputCountry2}
+            onChange={(e) => setInputCountry2(e.target.value)}
             sx={{ width: "30%" }}
           />
         </Box>
@@ -210,9 +223,9 @@ const ComparisonsPage = () => {
                 <Table>
                   <TableHead>
                     <TableRow>
-                      <TableCell></TableCell> {/* Blank cell */}
-                      <TableCell>{city1}, {country1}</TableCell>
-                      <TableCell>{city2}, {country2}</TableCell>
+                      <TableCell></TableCell>
+                      <TableCell>{comparedCity1}, {comparedCountry1}</TableCell>
+                      <TableCell>{comparedCity2}, {comparedCountry2}</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -223,12 +236,12 @@ const ComparisonsPage = () => {
                           <TableCell>{category}</TableCell>
                           <TableCell>
                             {item
-                              ? item[`${city1.toLowerCase().replace(/ /g, "_")}_${country1.toLowerCase().replace(/ /g, "_")}`] ?? "No Data"
+                              ? item[`${comparedCity1.toLowerCase().replace(/ /g, "_")}_${comparedCountry1.toLowerCase().replace(/ /g, "_")}`] ?? "No Data"
                               : "No Data"}
                           </TableCell>
                           <TableCell>
                             {item
-                              ? item[`${city2.toLowerCase().replace(/ /g, "_")}_${country2.toLowerCase().replace(/ /g, "_")}`] ?? "No Data"
+                              ? item[`${comparedCity2.toLowerCase().replace(/ /g, "_")}_${comparedCountry2.toLowerCase().replace(/ /g, "_")}`] ?? "No Data"
                               : "No Data"}
                           </TableCell>
                         </TableRow>

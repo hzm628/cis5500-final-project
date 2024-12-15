@@ -135,104 +135,141 @@ const compare_cities = async function (req, res) {
   const city2 = req.query.city2 ?? 'Boston';
   const country2 = req.query.country2 ?? 'United States';
 
+  if (!city1 || !country1 || !city2 || !country2) {
+    return res.status(400).json({ error: "City and country parameters are required for both cities." });
+  }
+
   const col1 = `${city1.replace(/ /g, "_")}_${country1.replace(/ /g, "_")}`;
   const col2 = `${city2.replace(/ /g, "_")}_${country2.replace(/ /g, "_")}`;
 
-  if (city1 && country1 && city2 && country2) {
-    connection.query(
-      `
-      WITH city_one AS (
-          SELECT * FROM cities
-          WHERE (LOWER(country) = LOWER('${country1}') AND LOWER(city) = LOWER('${city1}'))
-          ORDER BY city_population DESC
-          LIMIT 1
-      ),
-      city_two AS (
-          SELECT * FROM cities
-          WHERE (LOWER(country) = LOWER('${country2}') AND LOWER(city) = LOWER('${city2}'))
-          ORDER BY city_population DESC
-          LIMIT 1
-      )
-      SELECT * FROM (SELECT 'population'      AS category,
-                                     a.city_population AS ${col1},
-                                     b.city_population AS ${col2}
-                              FROM city_one a,
-                                   city_two b
-          ) AS population
-          UNION ALL
-          SELECT * FROM (SELECT 'cost_of_living'      AS category,
-                                     a.cost_of_living_index AS ${col1},
-                                     b.cost_of_living_index AS ${col2}
-                              FROM (
-                                  SELECT * FROM city_one x
-                                      LEFT JOIN cost_of_living l
-                                      ON (x.city = l.city AND x.country = l.country)
-                                   ) a,
-                                  (
-                                  SELECT * FROM city_two y
-                                      LEFT JOIN cost_of_living l
-                                      ON (y.city = l.city AND y.country = l.country)
-                                   ) b) AS cost_of_living
-          UNION ALL
-          SELECT * FROM (SELECT 'terrorism_attacks'      AS category,
-                                     a.count AS ${col1},
-                                     b.count AS ${col2}
-                              FROM (
-                                  SELECT COUNT(*) FROM city_one x
-                                      LEFT JOIN global_terrorism l
-                                      ON (x.city = l.city AND x.country = l.country)
-                                   ) a,
-                                  (
-                                  SELECT COUNT(*) FROM city_two y
-                                      LEFT JOIN global_terrorism l
-                                      ON (y.city = l.city AND y.country = l.country)
-                                   ) b) AS terrorism
-          UNION ALL
-          SELECT * FROM (SELECT 'crime_index'      AS category,
-                                     a.crime_index AS ${col1},
-                                     b.crime_index AS ${col2}
-                              FROM (
-                                  SELECT * FROM city_one x
-                                      LEFT JOIN city_crime_index l
-                                      ON (x.city = l.city AND x.country = TRIM(l.country))
-                                   ) a,
-                                  (
-                                  SELECT * FROM city_two y
-                                      LEFT JOIN city_crime_index l
-                                      ON (y.city = l.city AND y.country = TRIM(l.country))
-                                   ) b
-          ) AS crime_index
-          UNION ALL
-          SELECT * FROM (SELECT 'average_temperature'      AS category,
-                                     a.avg AS ${col1},
-                                     b.avg AS ${col2}
-                              FROM (
-                                  SELECT ROUND(AVG(avg_temperature), 2) AS avg FROM city_one x
-                                      LEFT JOIN city_temperature l
-                                      ON (x.city = l.city AND x.country = l.country)
-                                   ) a,
-                                  (
-                                  SELECT ROUND(AVG(avg_temperature), 2) AS avg FROM city_two y
-                                      LEFT JOIN city_temperature l
-                                      ON (y.city = l.city AND y.country = l.country)
-                                   ) b) AS avg_temperature;
-      `,
-      (err, data) => {
-        if (err) {
-          console.log(err);
-          res.status(500).json({ error: "An error occurred while processing the request." });
-        } else if (!data.rows.length) {
-          res.status(404).json({
-            error: `One or both cities (${city1}, ${country1} or ${city2}, ${country2}) do not exist. Please check your input and try again.`,
-          });
-        } else {
+  // First, check if both cities exist
+  connection.query(
+    `
+    SELECT
+      (SELECT COUNT(*) FROM cities WHERE LOWER(city)=LOWER($1) AND LOWER(country)=LOWER($2))::int AS count1,
+      (SELECT COUNT(*) FROM cities WHERE LOWER(city)=LOWER($3) AND LOWER(country)=LOWER($4))::int AS count2
+    `,
+    [city1, country1, city2, country2],
+    (err, existenceData) => {
+      if (err) {
+        console.error(err);
+        return res.status(500).json({ error: "An error occurred checking city existence." });
+      }
+
+      if (!existenceData || !existenceData.rows || existenceData.rows.length === 0) {
+        return res.status(404).json({
+          error: `No data returned. One or both cities may not exist.`
+        });
+      }
+
+      const { count1, count2 } = existenceData.rows[0];
+      if (count1 === 0 || count2 === 0) {
+        return res.status(404).json({
+          error: `One or both cities (${city1}, ${country1}) or (${city2}, ${country2}) do not exist.`
+        });
+      }
+
+      // Both cities exist, now run the main comparison query
+      connection.query(
+        `
+        WITH city_one AS (
+            SELECT * FROM cities
+            WHERE LOWER(country) = LOWER($1) AND LOWER(city) = LOWER($2)
+            ORDER BY city_population DESC
+            LIMIT 1
+        ),
+        city_two AS (
+            SELECT * FROM cities
+            WHERE LOWER(country) = LOWER($3) AND LOWER(city) = LOWER($4)
+            ORDER BY city_population DESC
+            LIMIT 1
+        )
+        SELECT * FROM (SELECT 'population' AS category,
+                               a.city_population AS ${col1},
+                               b.city_population AS ${col2}
+                        FROM city_one a,
+                             city_two b
+        ) AS population
+        UNION ALL
+        SELECT * FROM (SELECT 'cost_of_living' AS category,
+                               a.cost_of_living_index AS ${col1},
+                               b.cost_of_living_index AS ${col2}
+                        FROM (
+                            SELECT * FROM city_one x
+                                LEFT JOIN cost_of_living l
+                                ON (x.city = l.city AND x.country = l.country)
+                        ) a,
+                        (
+                            SELECT * FROM city_two y
+                                LEFT JOIN cost_of_living l
+                                ON (y.city = l.city AND y.country = l.country)
+                        ) b
+        ) AS cost_of_living
+        UNION ALL
+        SELECT * FROM (SELECT 'terrorism_attacks' AS category,
+                               a.count AS ${col1},
+                               b.count AS ${col2}
+                        FROM (
+                            SELECT COUNT(*) FROM city_one x
+                                LEFT JOIN global_terrorism l
+                                ON (x.city = l.city AND x.country = l.country)
+                        ) a,
+                        (
+                            SELECT COUNT(*) FROM city_two y
+                                LEFT JOIN global_terrorism l
+                                ON (y.city = l.city AND y.country = l.country)
+                        ) b
+        ) AS terrorism
+        UNION ALL
+        SELECT * FROM (SELECT 'crime_index' AS category,
+                               a.crime_index AS ${col1},
+                               b.crime_index AS ${col2}
+                        FROM (
+                            SELECT * FROM city_one x
+                                LEFT JOIN city_crime_index l
+                                ON (x.city = l.city AND x.country = TRIM(l.country))
+                        ) a,
+                        (
+                            SELECT * FROM city_two y
+                                LEFT JOIN city_crime_index l
+                                ON (y.city = l.city AND y.country = TRIM(l.country))
+                        ) b
+        ) AS crime_index
+        UNION ALL
+        SELECT * FROM (SELECT 'average_temperature' AS category,
+                               a.avg AS ${col1},
+                               b.avg AS ${col2}
+                        FROM (
+                            SELECT ROUND(AVG(avg_temperature), 2) AS avg FROM city_one x
+                                LEFT JOIN city_temperature l
+                                ON (x.city = l.city AND x.country = l.country)
+                        ) a,
+                        (
+                            SELECT ROUND(AVG(avg_temperature), 2) AS avg FROM city_two y
+                                LEFT JOIN city_temperature l
+                                ON (y.city = l.city AND y.country = l.country)
+                        ) b
+        ) AS avg_temperature;
+        `,
+        [country1, city1, country2, city2],
+        (err, data) => {
+          if (err) {
+            console.error(err);
+            return res.status(500).json({ error: "An error occurred while processing the request." });
+          }
+
+          if (!data || !data.rows || data.rows.length === 0) {
+            return res.status(404).json({
+              error: `No comparison data available for (${city1}, ${country1}) and (${city2}, ${country2}).`
+            });
+          }
+
+          // Valid data returned
           res.json(data.rows);
         }
-      }
-    );
-  } else {
-    res.status(400).json({ error: "City and country parameters are required for both cities." });
-  }
+      );
+    }
+  );
 };
 
 
