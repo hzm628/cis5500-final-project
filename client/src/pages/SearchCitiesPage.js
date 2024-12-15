@@ -33,7 +33,9 @@ export default function SearchCitiesPage() {
   const [safetyIndex, setSafetyIndex] = useState([0, 100]);
   const [costOfLivingIndex, setCostOfLivingIndex] = useState([0, 100]);
   const [terrorismDeaths, setTerrorismDeaths] = useState([0, 9999]);
-  const [includeCitiesWithNoData, setIncludeCitiesWithNoData] = useState(true);  
+  const [includeCitiesWithNoData, setIncludeCitiesWithNoData] = useState(true);
+  const page = 1;
+  const pageSize = 100;
 
   const fetchCities = () => { 
     setLoading(true);
@@ -50,6 +52,8 @@ export default function SearchCitiesPage() {
       `max_cost_of_living_index=${costOfLivingIndex[1]}`,
       `max_terrorism_deaths=${terrorismDeaths[1]}`,
       includeCitiesWithNoData ? 'include_missing_data=true' : '',
+      `page=${page}`,
+      `page_size=${pageSize}`,
     ] 
       .filter(Boolean) // filter out empty strings 
       .join('&'); // format query parameters 

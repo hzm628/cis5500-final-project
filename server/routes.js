@@ -474,103 +474,101 @@ const preference_search = async function (req, res) {
   const pageSize = req.query.page_size ?? 10;
 
   const country = req.query.country;
-  const countryFilter = country ? `AND LOWER(st.country) = LOWER('${country}')` : '';
+  const countryFilter = country ? `AND LOWER(pd.country) = LOWER('${country}')` : '';
 
   const includeMissingData = req.query.include_missing_data === 'true';
   const missingDataCondition = includeMissingData
-    ? '' 
+    ? ''
     : `
-      AND cd.crime_index IS NOT NULL 
-      AND cd.safety_index IS NOT NULL 
-      AND cld.cost_of_living_index IS NOT NULL 
-      AND td.total_deaths_from_terrorism IS NOT NULL 
+      AND cd.crime_index IS NOT NULL
+      AND cd.safety_index IS NOT NULL
+      AND cld.cost_of_living_index IS NOT NULL
+      AND td.total_deaths_from_terrorism IS NOT NULL
     `;
 
-  if (!page) { 
+  if (!page) {
     connection.query(`
       WITH summer_temp AS (
-                SELECT
-                    city, country,
-                    AVG(avg_temperature) AS avg_summer_temp
-                FROM
-                    city_temperature
-                WHERE
-                    month IN (6, 7, 8)
-                GROUP BY
-                    country, city
-            ),
-            winter_temp AS (
-                SELECT
-                    city, country,
-                    AVG(avg_temperature) AS avg_winter_temp
-                FROM
-                    city_temperature
-                WHERE
-                    month IN (12, 1, 2)
-                GROUP BY
-                    country, city
-            ),
-            crime_data AS (
-                SELECT
-                    city, country, crime_index, safety_index
-                FROM
-                    city_crime_index
-            ),
-            cost_of_living_data AS (
-                SELECT
-                    city, country, cost_of_living_index
-                FROM
-                    cost_of_living
-            ),
-            terrorism_data AS (
-                SELECT
-                    city, country, SUM(nkill) AS total_deaths_from_terrorism
-                FROM
-                    global_terrorism
-                GROUP BY
-                    city, country
-            )
-            SELECT
-                st.city,
-                st.country,
-                st.avg_summer_temp,
-                wt.avg_winter_temp,
-                pd.city_population,
-                cd.crime_index,
-                cd.safety_index,
-                cld.cost_of_living_index,
-                td.total_deaths_from_terrorism
-            FROM
-                summer_temp st
-            JOIN
-                winter_temp wt
-                ON st.city = wt.city AND st.country = wt.country
-            JOIN
-                cities pd
-                ON st.city = pd.city AND st.country = pd.country
-            LEFT JOIN
-                crime_data cd
-                ON st.city = cd.city AND st.country = cd.country
-            LEFT JOIN
-                cost_of_living_data cld
-                ON st.city = cld.city AND st.country = cld.country
-            LEFT JOIN
-                terrorism_data td
-                ON st.city = td.city AND st.country = td.country
-            WHERE
-                st.avg_summer_temp BETWEEN ${minSummerTemp} AND ${maxSummerTemp}
-                AND wt.avg_winter_temp BETWEEN ${minWinterTemp} AND ${maxWinterTemp}
-                AND pd.city_population >= ${minPopulation}
-                AND pd.city_population <= ${maxPopulation}
-                AND (cd.crime_index IS NULL OR cd.crime_index <= ${maxCrimeIndex})
-                AND (cd.safety_index IS NULL OR cd.safety_index >= ${minSafetyIndex})
-                AND (cld.cost_of_living_index IS NULL OR cld.cost_of_living_index <= ${maxCostOfLivingIndex})
-                AND (td.total_deaths_from_terrorism IS NULL OR td.total_deaths_from_terrorism <= ${maxTerrorismDeaths})
-                ${countryFilter}
-                ${missingDataCondition}
-            ORDER BY
-                st.avg_summer_temp DESC,
-                pd.city_population DESC;
+                      SELECT
+                          city, country,
+                          AVG(avg_temperature) AS avg_summer_temp
+                      FROM
+                          city_temperature
+                      WHERE
+                          month IN (6, 7, 8)
+                      GROUP BY
+                          country, city
+                  ),
+                  winter_temp AS (
+                      SELECT
+                          city, country,
+                          AVG(avg_temperature) AS avg_winter_temp
+                      FROM
+                          city_temperature
+                      WHERE
+                          month IN (12, 1, 2)
+                      GROUP BY
+                          country, city
+                  ),
+                  crime_data AS (
+                      SELECT
+                          city, country, crime_index, safety_index
+                      FROM
+                          city_crime_index
+                  ),
+                  cost_of_living_data AS (
+                      SELECT
+                          city, country, cost_of_living_index
+                      FROM
+                          cost_of_living
+                  ),
+                  terrorism_data AS (
+                      SELECT
+                          city, country, SUM(nkill) AS total_deaths_from_terrorism
+                      FROM
+                          global_terrorism
+                      GROUP BY
+                          city, country
+                  )
+                  SELECT
+                      pd.city,
+                      pd.country,
+                      st.avg_summer_temp,
+                      wt.avg_winter_temp,
+                      pd.city_population,
+                      cd.crime_index,
+                      cd.safety_index,
+                      cld.cost_of_living_index,
+                      td.total_deaths_from_terrorism
+                  FROM cities pd
+                  LEFT JOIN
+                      winter_temp wt
+                      ON pd.city = wt.city AND pd.country = wt.country
+                  LEFT JOIN
+                      summer_temp st
+                      ON pd.city = st.city AND pd.country = st.country
+                  LEFT JOIN
+                      crime_data cd
+                      ON pd.city = cd.city AND pd.country = cd.country
+                  LEFT JOIN
+                      cost_of_living_data cld
+                      ON pd.city = cld.city AND pd.country = cld.country
+                  LEFT JOIN
+                      terrorism_data td
+                      ON pd.city = td.city AND pd.country = td.country
+                  WHERE
+                      (st.avg_summer_temp IS NULL OR st.avg_summer_temp BETWEEN ${minSummerTemp} AND ${maxSummerTemp})
+                      AND (wt.avg_winter_temp IS NULL OR wt.avg_winter_temp BETWEEN ${minWinterTemp} AND ${maxWinterTemp})
+                      AND (pd.city_population IS NULL OR pd.city_population >= ${minPopulation})
+                      AND (pd.city_population IS NULL OR pd.city_population <= ${maxPopulation})
+                      AND (cd.crime_index IS NULL OR cd.crime_index <= ${maxCrimeIndex})
+                      AND (cd.safety_index IS NULL OR cd.safety_index >= ${minSafetyIndex})
+                      AND (cld.cost_of_living_index IS NULL OR cld.cost_of_living_index <= ${maxCostOfLivingIndex})
+                      AND (td.total_deaths_from_terrorism IS NULL OR td.total_deaths_from_terrorism <= ${maxTerrorismDeaths})
+                      ${countryFilter}
+                      ${missingDataCondition}
+                  ORDER BY
+                      pd.city_population DESC;
     `, (err, data) => { 
       if (err) {
         console.log(err);
@@ -585,88 +583,86 @@ const preference_search = async function (req, res) {
 
     connection.query(`
       WITH summer_temp AS (
-                SELECT
-                    city, country,
-                    AVG(avg_temperature) AS avg_summer_temp
-                FROM
-                    city_temperature
-                WHERE
-                    month IN (6, 7, 8)
-                GROUP BY
-                    country, city
-            ),
-            winter_temp AS (
-                SELECT
-                    city, country,
-                    AVG(avg_temperature) AS avg_winter_temp
-                FROM
-                    city_temperature
-                WHERE
-                    month IN (12, 1, 2)
-                GROUP BY
-                    country, city
-            ),
-            crime_data AS (
-                SELECT
-                    city, country, crime_index, safety_index
-                FROM
-                    city_crime_index
-            ),
-            cost_of_living_data AS (
-                SELECT
-                    city, country, cost_of_living_index
-                FROM
-                    cost_of_living
-            ),
-            terrorism_data AS (
-                SELECT
-                    city, country, SUM(nkill) AS total_deaths_from_terrorism
-                FROM
-                    global_terrorism
-                GROUP BY
-                    city, country
-            )
-            SELECT
-                st.city,
-                st.country,
-                st.avg_summer_temp,
-                wt.avg_winter_temp,
-                pd.city_population,
-                cd.crime_index,
-                cd.safety_index,
-                cld.cost_of_living_index,
-                td.total_deaths_from_terrorism
-            FROM
-                summer_temp st
-            JOIN
-                winter_temp wt
-                ON st.city = wt.city AND st.country = wt.country
-            JOIN
-                cities pd
-                ON st.city = pd.city AND st.country = pd.country
-            LEFT JOIN
-                crime_data cd
-                ON st.city = cd.city AND st.country = cd.country
-            LEFT JOIN
-                cost_of_living_data cld
-                ON st.city = cld.city AND st.country = cld.country
-            LEFT JOIN
-                terrorism_data td
-                ON st.city = td.city AND st.country = td.country
-            WHERE
-                st.avg_summer_temp BETWEEN ${minSummerTemp} AND ${maxSummerTemp}
-                AND wt.avg_winter_temp BETWEEN ${minWinterTemp} AND ${maxWinterTemp}
-                AND pd.city_population >= ${minPopulation}
-                AND pd.city_population <= ${maxPopulation}
-                AND (cd.crime_index IS NULL OR cd.crime_index <= ${maxCrimeIndex})
-                AND (cd.safety_index IS NULL OR cd.safety_index >= ${minSafetyIndex})
-                AND (cld.cost_of_living_index IS NULL OR cld.cost_of_living_index <= ${maxCostOfLivingIndex})
-                AND (td.total_deaths_from_terrorism IS NULL OR td.total_deaths_from_terrorism <= ${maxTerrorismDeaths})
-                ${countryFilter}
-                ${missingDataCondition}
-            ORDER BY
-                st.avg_summer_temp DESC,
-                pd.city_population DESC
+                      SELECT
+                          city, country,
+                          AVG(avg_temperature) AS avg_summer_temp
+                      FROM
+                          city_temperature
+                      WHERE
+                          month IN (6, 7, 8)
+                      GROUP BY
+                          country, city
+                  ),
+                  winter_temp AS (
+                      SELECT
+                          city, country,
+                          AVG(avg_temperature) AS avg_winter_temp
+                      FROM
+                          city_temperature
+                      WHERE
+                          month IN (12, 1, 2)
+                      GROUP BY
+                          country, city
+                  ),
+                  crime_data AS (
+                      SELECT
+                          city, country, crime_index, safety_index
+                      FROM
+                          city_crime_index
+                  ),
+                  cost_of_living_data AS (
+                      SELECT
+                          city, country, cost_of_living_index
+                      FROM
+                          cost_of_living
+                  ),
+                  terrorism_data AS (
+                      SELECT
+                          city, country, SUM(nkill) AS total_deaths_from_terrorism
+                      FROM
+                          global_terrorism
+                      GROUP BY
+                          city, country
+                  )
+                  SELECT
+                      pd.city,
+                      pd.country,
+                      st.avg_summer_temp,
+                      wt.avg_winter_temp,
+                      pd.city_population,
+                      cd.crime_index,
+                      cd.safety_index,
+                      cld.cost_of_living_index,
+                      td.total_deaths_from_terrorism
+                  FROM cities pd
+                  LEFT JOIN
+                      winter_temp wt
+                      ON pd.city = wt.city AND pd.country = wt.country
+                  LEFT JOIN
+                      summer_temp st
+                      ON pd.city = st.city AND pd.country = st.country
+                  LEFT JOIN
+                      crime_data cd
+                      ON pd.city = cd.city AND pd.country = cd.country
+                  LEFT JOIN
+                      cost_of_living_data cld
+                      ON pd.city = cld.city AND pd.country = cld.country
+                  LEFT JOIN
+                      terrorism_data td
+                      ON pd.city = td.city AND pd.country = td.country
+                  WHERE
+                      (st.avg_summer_temp IS NULL OR st.avg_summer_temp BETWEEN ${minSummerTemp} AND ${maxSummerTemp})
+                      AND (wt.avg_winter_temp IS NULL OR wt.avg_winter_temp BETWEEN ${minWinterTemp} AND ${maxWinterTemp})
+                      AND (pd.city_population IS NULL OR pd.city_population >= ${minPopulation})
+                      AND (pd.city_population IS NULL OR pd.city_population <= ${maxPopulation})
+                      AND (cd.crime_index IS NULL OR cd.crime_index <= ${maxCrimeIndex})
+                      AND (cd.safety_index IS NULL OR cd.safety_index >= ${minSafetyIndex})
+                      AND (cld.cost_of_living_index IS NULL OR cld.cost_of_living_index <= ${maxCostOfLivingIndex})
+                      AND (td.total_deaths_from_terrorism IS NULL OR td.total_deaths_from_terrorism <= ${maxTerrorismDeaths})
+                      ${countryFilter}
+                      ${missingDataCondition}
+                  ORDER BY
+                      pd.city_population DESC
       LIMIT ${pageSize} OFFSET ${offset};
     `, (err, data) => {
       if (err) {
