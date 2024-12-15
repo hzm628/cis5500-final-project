@@ -105,7 +105,7 @@ const similar_cities = async function (req, res) {
           AND LOWER(a.city) = LOWER($1) 
           AND LOWER(a.country) = LOWER($2)
         ORDER BY similarity_score DESC, b.population DESC
-        LIMIT 20;
+        LIMIT 99;
         `,
         [city_name, country_name],
         (err, data) => {

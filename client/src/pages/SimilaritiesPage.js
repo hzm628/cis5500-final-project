@@ -6,7 +6,6 @@ import {
   Grid,
   Button,
   CircularProgress,
-  Paper,
   TextField,
 } from "@mui/material";
 import { useLocation } from "react-router-dom";
@@ -15,22 +14,32 @@ import config from "../config.json"; // Import configuration
 
 export default function SimilaritiesPage() {
   const location = useLocation();
-  const prefilledCity = location.state?.cityName || "";
-  const prefilledCountry = location.state?.countryName || "";
 
-  const [cityName, setCityName] = useState(prefilledCity);
-  const [countryName, setCountryName] = useState(prefilledCountry);
+  const [cityName, setCityName] = useState(location.state?.cityName || "");
+  const [countryName, setCountryName] = useState(location.state?.countryName || "");
   const [similarCities, setSimilarCities] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
 
+  // Run fetchSimilarCities when location.state changes, 
+  // indicating a new city/country was passed.
   useEffect(() => {
-    if (prefilledCity && prefilledCountry) {
-      fetchSimilarCities();
+    if (location.state?.cityName && location.state?.countryName) {
+      setCityName(location.state.cityName);
+      setCountryName(location.state.countryName);
+      fetchSimilarCities(location.state.cityName, location.state.countryName);
     }
-  }, [prefilledCity, prefilledCountry]);
+  }, [location.state]);
 
-  const fetchSimilarCities = async () => {
+  // Optionally, if you want to fetch immediately on initial load 
+  // if cityName and countryName are available:
+  useEffect(() => {
+    if (cityName && countryName && similarCities.length === 0) {
+      fetchSimilarCities(cityName, countryName);
+    }
+  }, []);
+
+  const fetchSimilarCities = async (cName = cityName, cCountry = countryName) => {
     try {
       setIsLoading(true);
       setError(null);
@@ -38,8 +47,8 @@ export default function SimilaritiesPage() {
 
       const response = await fetch(
         `http://${config.server_host}:${config.server_port}/similar_cities?city_name=${encodeURIComponent(
-          cityName
-        )}&country_name=${encodeURIComponent(countryName)}`
+          cName
+        )}&country_name=${encodeURIComponent(cCountry)}`
       );
 
       if (!response.ok) {
@@ -83,7 +92,7 @@ export default function SimilaritiesPage() {
           <Button
             variant="contained"
             color="primary"
-            onClick={fetchSimilarCities}
+            onClick={() => fetchSimilarCities(cityName, countryName)}
             disabled={isLoading || !cityName || !countryName}
           >
             {isLoading ? <CircularProgress size={24} /> : "Get Similar Cities"}
