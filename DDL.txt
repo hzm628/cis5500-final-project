@@ -1,0 +1,157 @@
+﻿create table cdc_local_health_data
+(
+    location                 varchar(25)      not null,
+    total_population         integer          not null,
+    total_population_over_18 integer,
+    longitude                double precision not null,
+    latitude                 double precision not null,
+    measure                  varchar(25)      not null,
+    percent                  double precision,
+    primary key (longitude, latitude, measure)
+);
+
+
+create table cities
+(
+    country         varchar not null,
+    city            varchar not null,
+    city_population integer,
+    city_latitude   double precision,
+    city_longitude  double precision,
+    primary key (city, country)
+);
+
+
+create table city_crime_index
+(
+    city         varchar(100) not null,
+    country      varchar(100) not null,
+    crime_index  numeric(5, 2),
+    safety_index numeric(5, 2),
+    primary key (city, country)
+);
+
+
+create table city_temperature
+(
+    country         varchar(100) not null,
+    city            varchar(100) not null,
+    month           integer      not null
+        constraint city_temperature_month_check
+            check ((month >= 1) AND (month <= 12)),
+    day             integer      not null
+        constraint city_temperature_day_check
+            check ((day >= 1) AND (day <= 31)),
+    year            integer      not null
+        constraint city_temperature_year_check
+            check (year >= 0),
+    avg_temperature numeric(5, 2),
+    primary key (country, city, month, day, year)
+);
+
+
+create table cost_of_living
+(
+    city                          varchar(25) not null,
+    country                       varchar(25) not null,
+    cost_of_living_index          double precision,
+    rent_index                    double precision,
+    cost_of_living_and_rent_index double precision,
+    groceries_index               double precision,
+    restaurant_price_index        double precision,
+    local_purchasing_power        double precision,
+    primary key (city, country)
+);
+
+
+create table country
+(
+    country_name                   text not null
+        primary key,
+    agricultural_land              double precision,
+    land_area                      double precision,
+    birth_rate                     double precision,
+    co2_emissions                  double precision,
+    cpi                            double precision,
+    cpi_change                     double precision,
+    fertility_rate                 double precision,
+    forested_area                  double precision,
+    gasoline_price                 double precision,
+    gdp                            double precision,
+    primary_education              double precision,
+    tertiary_education             double precision,
+    infant_mortality               double precision,
+    largest_city                   text,
+    life_expectancy                double precision,
+    minimum_wage                   double precision,
+    official_language              text,
+    healthcare_costs               double precision,
+    physicians_per_capita          double precision,
+    population                     double precision,
+    labor_force_participation_rate double precision,
+    tax_revenue                    double precision,
+    tax_rate                       double precision,
+    urban_population               double precision,
+    latitude                       double precision,
+    longitude                      double precision,
+    democracy_index                double precision,
+    unemployment_rate              double precision,
+    education_index                double precision
+);
+
+
+create table global_terrorism
+(
+    eventid   bigint       not null
+        primary key,
+    year      integer,
+    month     integer,
+    country   varchar(100) not null,
+    city      varchar(255) not null,
+    latitude  numeric(9, 6),
+    longitude numeric(9, 6),
+    gname     varchar(255),
+    nkill     numeric(5, 1),
+    nwound    numeric(5, 1)
+);
+
+
+create table schools
+(
+    name       varchar(25) not null,
+    address    varchar(25),
+    city       varchar(25) not null,
+    level      varchar(25),
+    enrollment integer     not null,
+    ft_teacher integer,
+    type       varchar(25),
+    id         serial
+        primary key
+);
+
+
+create table us_crime
+(
+    city          varchar(255) not null
+        primary key,
+    population    integer,
+    violent_crime numeric(10, 1),
+    murder        numeric(10, 1),
+    rape          numeric(10, 1),
+    robbery       numeric(10, 1),
+    agrv_assault  numeric(10, 1),
+    prop_crime    numeric(10, 1),
+    burglary      numeric(10, 1),
+    larceny       numeric(10, 1),
+    vehicle_theft numeric(10, 1),
+    total_crime   numeric(15, 1),
+    arson         numeric(10, 1)
+);
+
+
+create table zillow_home_prices
+(
+    city      varchar(25) not null
+        primary key,
+    homeprice double precision
+);
