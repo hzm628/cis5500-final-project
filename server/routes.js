@@ -343,34 +343,39 @@ const city_us = async function (req, res) {
   
   connection.query(`
   WITH numSchools AS (
-    SELECT city, COUNT(*) AS num_schools
-    FROM schools
-    GROUP BY city
-    )  
-    SELECT
-      cities.country, 
-      cities.city,
-      city_population, 
-      CASE WHEN cost_of_living_index IS NULL THEN -1 ELSE cost_of_living_index END AS cost_of_living_index,
-      CASE WHEN rent_index IS NULL THEN -1 ELSE rent_index END AS rent_index,
-      CASE WHEN groceries_index IS NULL THEN -1 ELSE groceries_index END AS groceries_index,
-      CASE WHEN restaurant_price_index IS NULL THEN -1 ELSE restaurant_price_index END AS restaurant_price_index,
-      CASE WHEN ci.crime_index IS NULL THEN -1 ELSE ci.crime_index END AS crime_index,
-      CASE WHEN ci.safety_index IS NULL THEN -1 ELSE ci.safety_index END AS safety_index,
-      CASE WHEN violent_crime IS NULL THEN -1 ELSE violent_crime END AS violent_crime,
-      CASE WHEN total_crime IS NULL THEN -1 ELSE total_crime END AS total_crime,
-      CASE WHEN homeprice IS NULL THEN -1 ELSE homeprice END AS homeprice,
-      CASE WHEN n.num_schools IS NULL THEN -1 ELSE n.num_schools END AS num_schools,
-      CASE WHEN cdc.percent IS NULL THEN -1 ELSE cdc.percent END AS percent 
-    FROM cities
-    LEFT JOIN city_crime_index ci ON ci.city = cities.city
-    LEFT JOIN cost_of_living ON cost_of_living.city = cities.city
-    LEFT JOIN zillow_home_prices z ON z.city = cities.city
-    LEFT JOIN us_crime u ON u.city = cities.city
-    LEFT JOIN numSchools n ON n.city = cities.city
-    LEFT JOIN cdc_local_health_data cdc ON cdc.location = cities.city
-    WHERE LOWER(cities.city) = LOWER('${city_name}') AND cities.country = 'United States'
-    ORDER BY percent DESC
+      SELECT city, COUNT(*) AS num_schools
+      FROM schools
+      GROUP BY city
+      )
+      SELECT
+        cities.country,
+        cities.city,
+        city_population,
+        CASE WHEN cost_of_living_index IS NULL THEN -1 ELSE cost_of_living_index END AS cost_of_living_index,
+        CASE WHEN rent_index IS NULL THEN -1 ELSE rent_index END AS rent_index,
+        CASE WHEN groceries_index IS NULL THEN -1 ELSE groceries_index END AS groceries_index,
+        CASE WHEN restaurant_price_index IS NULL THEN -1 ELSE restaurant_price_index END AS restaurant_price_index,
+        CASE WHEN ci.crime_index IS NULL THEN -1 ELSE ci.crime_index END AS crime_index,
+        CASE WHEN ci.safety_index IS NULL THEN -1 ELSE ci.safety_index END AS safety_index,
+        CASE WHEN violent_crime IS NULL THEN -1 ELSE violent_crime END AS violent_crime,
+        CASE WHEN total_crime IS NULL THEN -1 ELSE total_crime END AS total_crime,
+        CASE WHEN homeprice IS NULL THEN -1 ELSE homeprice END AS homeprice,
+        CASE WHEN n.num_schools IS NULL THEN -1 ELSE n.num_schools END AS num_schools,
+        CASE WHEN cdc.percent IS NULL THEN -1 ELSE cdc.percent END AS percent
+      FROM cities
+      LEFT JOIN city_crime_index ci ON ci.city = cities.city
+      LEFT JOIN cost_of_living ON cost_of_living.city = cities.city
+      LEFT JOIN zillow_home_prices z ON z.city = cities.city
+      LEFT JOIN us_crime u ON u.city = cities.city
+      LEFT JOIN numSchools n ON n.city = cities.city
+      LEFT JOIN (SELECT city, nearest_longitude, nearest_latitude, AVG(percent) AS percent
+                 FROM nearest_cdc nc1
+                 LEFT JOIN cdc_local_health_data cdc1
+                 ON (nc1.nearest_longitude = cdc1.longitude AND nc1.nearest_latitude = cdc1.latitude)
+                 GROUP BY city, nearest_longitude, nearest_latitude) cdc
+          ON cdc.city = cities.city
+      WHERE LOWER(cities.city) = LOWER('${city_name}') AND cities.country = 'United States'
+      ORDER BY percent DESC
     `, (err, data) => {
      if (err) {
       console.log(err);
