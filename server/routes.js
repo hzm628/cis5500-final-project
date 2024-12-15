@@ -480,6 +480,9 @@ const preference_search = async function (req, res) {
   const missingDataCondition = includeMissingData
     ? ''
     : `
+      AND st.avg_summer_temp IS NOT NULL
+      AND wt.avg_winter_temp IS NOT NULL
+      AND pd.city_population IS NOT NULL
       AND cd.crime_index IS NOT NULL
       AND cd.safety_index IS NOT NULL
       AND cld.cost_of_living_index IS NOT NULL
